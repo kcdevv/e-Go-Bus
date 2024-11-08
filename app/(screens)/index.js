@@ -17,9 +17,9 @@ const Index = () => {
       useNativeDriver: false,
     }).start();
 
-    // Redirect to "WhoYouAre" page after 3 seconds
+    // Redirect to "WhoYouAre" page after 3 seconds, using replace to prevent going back to the splash screen
     const timer = setTimeout(() => {
-      router.push("/WhoYouAre");
+      router.replace("/WhoYouAre");
     }, 3000);
 
     return () => clearTimeout(timer);
