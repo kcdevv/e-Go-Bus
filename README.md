@@ -47,15 +47,18 @@
 ### 🔧 Installation & Setup
 
 1. **Clone the Repository**
+   
    ```bash
    git clone https://github.com/your-username/eGO-Bus.git
    cd eGO-Bus
    
 2. **Install Dependencies**
+   
    ```bash
    npm install
    
 3. **Run the App**
+   
    ```bash
    npm start
 
