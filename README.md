@@ -50,3 +50,28 @@
    ```bash
    git clone https://github.com/your-username/eGO-Bus.git
    cd eGO-Bus
+   
+2. **Install Dependencies**
+   ```bash
+   npm install
+   
+3. **Run the App**
+   ```bash
+   npm start
+
+---
+
+### 👥 Contributors
+
+- **Goli**: UI/UX & Management 
+- **SSL & Kc**: Developers & Maintainers
+  
+---
+
+### 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+Stay tuned as we continuously work to make e-GO Bus the most reliable and secure school bus management app!
