@@ -8,13 +8,23 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
+import { useNavigation } from "expo-router";
 
 const Driver = () => {
   const [schoolID, setSchoolID] = useState("");
   const [busID, setBusID] = useState(null);
   const [driverID, setDriverID] = useState("");
+  const navigation = useNavigation()
 
-  const handleSubmit = () => {};
+  const handleSubmit = () => {
+    console.log("School ID:", schoolID);
+    console.log("Bus ID:", busID);
+    console.log("Driver ID:", driverID);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "dashboards/driver" }],
+    });
+  };
 
   const disabled = schoolID.length === 0 || driverID.length === 0;
 

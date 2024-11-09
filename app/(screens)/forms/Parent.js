@@ -1,14 +1,22 @@
 import { StyleSheet, Text, TextInput, View , Button, TouchableOpacity} from 'react-native'
 import React, { useState } from 'react'
 import tw from 'tailwind-react-native-classnames'
+import { useNavigation, useRouter } from 'expo-router'
 
 const Parent = () => {
   const [schoolID, setSchoolID] = useState('')
   const [busID, setBusID] = useState('')
   const [studentID, setStudentID] = useState('')
-
+  const navigation = useNavigation()
   const handleSubmit = ()=>{
-
+    console.log("School ID:", schoolID);
+    console.log("Bus ID:", busID);
+    console.log("Student ID:", studentID);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'dashboards/parent' }],
+    });    
+    
   }
 
   const disabled = schoolID.length === 0 || busID.length === 0 || studentID.length===0;

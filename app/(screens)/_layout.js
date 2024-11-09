@@ -22,6 +22,18 @@ export default function HomeLayout() {
         name="forms/Driver"
         options={{ title: "Driver Login" }}
       />
+      <Stack.Screen
+        name="dashboards/management"
+        options={{ title: "e-Go Bus" }}
+      />
+      <Stack.Screen
+        name="dashboards/driver"
+        options={{ title: "e-Go Bus" }}
+      />
+      <Stack.Screen
+        name="dashboards/parent"
+        options={{ title: "e-Go Bus" }}
+      />
     </Stack>
   );
 }

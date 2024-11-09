@@ -8,12 +8,21 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
+import { useNavigation } from "expo-router";
 
 const Management = () => {
   const [schoolID, setSchoolID] = useState("");
   const [password, setPassword] = useState("");
+  const navigation = useNavigation()
 
-  const handleSubmit = () => {};
+  const handleSubmit = () => {
+    console.log("School ID:", schoolID);
+    console.log("Password:", password);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "dashboards/management" }],
+    });
+  };
 
   const disabled = schoolID.length === 0 || password.length === 0;
 
