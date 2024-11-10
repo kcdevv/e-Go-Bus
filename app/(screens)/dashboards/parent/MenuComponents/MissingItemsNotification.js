@@ -9,16 +9,16 @@ const MissingItemsNotification = () => {
         {
           id: 1,
           date: 'Today',
-          imageUrl: require('../../../../assets/images/bag.png'), // Use local image
+          imageUrl: require('../../../../assets/images/bag.png'), 
           description: 'Someone’s bag is in the bus',
-          phoneNumber: '1234567890' // Replace with the actual driver's phone number
+          phoneNumber: '1234567890' 
         },
         {
           id: 2,
           date: '08/04/2024',
-          imageUrl: require('../../../../assets/images/combox.png'), // Use local image
+          imageUrl: require('../../../../assets/images/combox.png'), 
           description: 'Someone’s combox is in the bus',
-          phoneNumber: '1234567890' // Replace with the actual driver's phone number
+          phoneNumber: '1234567890' 
         }
       ];
       
