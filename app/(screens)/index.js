@@ -13,14 +13,14 @@ const Index = () => {
     // Animate the loading bar width over 3 seconds
     Animated.timing(loadingBarWidth, {
       toValue: 150,        // Final width of the loading bar
-      duration: 3000,      // Duration in milliseconds
+      duration: 4000,      // Duration in milliseconds
       useNativeDriver: false,
     }).start();
 
-    // Redirect to "WhoYouAre" page after 3 seconds, using replace to prevent going back to the splash screen
+    // Redirect to "WhoYouAre" page after 4 seconds, using replace to prevent going back to the splash screen
     const timer = setTimeout(() => {
       router.replace("/WhoYouAre");
-    }, 3000);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [router]);
@@ -32,7 +32,7 @@ const Index = () => {
         source={require("../assets/animations/splashScreenAnimation.json")}
         autoPlay
         loop
-        speed={1.5} // Increase speed for faster animation
+        speed={2.5} // Increase speed for faster animation
       />
       <Text style={{ fontSize: 25, fontWeight: "bold" }}>
         <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}>- </Text>
