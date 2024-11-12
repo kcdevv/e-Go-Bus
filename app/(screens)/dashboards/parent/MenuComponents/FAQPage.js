@@ -1,7 +1,7 @@
 // FAQPage.js
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import tw from 'twrnc';
+import tw from 'tailwind-react-native-classnames';
 
 const FAQPage = () => {
   const [expandedId, setExpandedId] = useState(null);

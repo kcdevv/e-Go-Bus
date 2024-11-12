@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, Image, ScrollView } from 'react-native';
 import CallDriverButton from './CallDriverButton';
-import tw from 'twrnc';
+import tw from 'tailwind-react-native-classnames';
 
 const MissingItemsNotification = () => {
     const items = [
