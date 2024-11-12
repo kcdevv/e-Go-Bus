@@ -4,6 +4,7 @@ const RootLayout = () => {
   return (
     <Stack
       screenOptions={{
+        headerShown: false,
         headerStyle: {
           backgroundColor: 'yellow',
         },

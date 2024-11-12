@@ -4,7 +4,7 @@ import { Stack } from "expo-router";
 
 const ParentLayout = () => {
   return (
-    <Stack>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
@@ -12,4 +12,3 @@ const ParentLayout = () => {
 
 export default ParentLayout;
 
-const styles = StyleSheet.create({});

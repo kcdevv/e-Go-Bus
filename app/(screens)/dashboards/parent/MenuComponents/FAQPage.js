@@ -39,19 +39,19 @@ const FAQPage = () => {
   };
 
   return (
-    <ScrollView style={tw`flex-1 px-4 py-8 bg-[#d1d1d1]`}>
+    <ScrollView style={tw`flex-1 px-4 py-8 bg-white`}>
       <Text style={tw`text-2xl font-bold mb-4 text-center`}>Frequently Asked Questions</Text>
       {faqs.map((faq) => (
         <View key={faq.id} style={tw`mb-4 border border-gray-300 rounded-lg`}>
           <TouchableOpacity
             onPress={() => toggleExpand(faq.id)}
-            style={tw`p-4 bg-[#fbbf24] rounded-t-lg`}
+            style={[tw`p-4 rounded-t-lg`, { backgroundColor: '#FCD32D' }]}
           >
             <Text style={tw`text-lg font-semibold`}>{faq.question}</Text>
           </TouchableOpacity>
           {expandedId === faq.id && (
-            <View style={tw`p-4 bg-[#f3f4f6] rounded-b-lg`}>
-              <Text style={tw`text-base text-[#4b5563]`}>{faq.answer}</Text>
+            <View style={[tw`p-4 rounded-b-lg`, { backgroundColor: "#F9F3F3" }]}>
+              <Text style={[tw`text-base`, { color: "#4b5563"}]}>{faq.answer}</Text>
             </View>
           )}
         </View>
@@ -59,5 +59,7 @@ const FAQPage = () => {
     </ScrollView>
   );
 };
+
+
 
 export default FAQPage;

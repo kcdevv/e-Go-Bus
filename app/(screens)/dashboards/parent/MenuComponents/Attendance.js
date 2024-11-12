@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import tw from 'tailwind-react-native-classnames'; 
 
-const CalendarPage = () => {
+const Attendance = () => {
   // State to store attendance status (Present or Absent for each day)
   const [attendance, setAttendance] = useState({
     '2024-11-10': 'present', // Example: the student is present on 10th November
@@ -41,4 +41,4 @@ const CalendarPage = () => {
   );
 };
 
-export default CalendarPage;
+export default Attendance;

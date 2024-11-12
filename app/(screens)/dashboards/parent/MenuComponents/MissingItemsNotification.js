@@ -28,7 +28,7 @@ const MissingItemsNotification = () => {
       {items.map((item) => (
         <View key={item.id} style={tw`border border-gray-300 rounded-lg p-4 mb-4`}>
           <Text style={tw`text-lg font-bold mb-2`}>{item.date}</Text>
-          <Image source={{ uri: item.imageUrl }} style={tw`w-full h-40 rounded-lg mb-4`} />
+          <Image source={item.imageUrl} style={tw`w-full h-40 rounded-lg mb-4`} />
           <Text style={tw`text-base mb-4`}>{item.description}</Text>
           <CallDriverButton phoneNumber={item.phoneNumber} />
         </View>
@@ -36,5 +36,7 @@ const MissingItemsNotification = () => {
     </ScrollView>
   );
 };
+
+
 
 export default MissingItemsNotification;
