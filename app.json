@@ -34,7 +34,10 @@
         "origin": false
       },
       "eas": {
-        "projectId": "b5e7423f-630e-42c1-aa78-e7a8665ff2b2"
+        "projectId": "b5e7423f-630e-42c1-aa78-e7a8665ff2b2",
+        "hooks": {
+          "pre-build":"npm i . --legacy-peer-deps"
+        }
       }
     }
   }
