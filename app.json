@@ -2,14 +2,16 @@
   "expo": {
     "name": "e-Go Bus",
     "slug": "e-Go-Bus",
-    "scheme": "e-Go-Bus",
+    "scheme": [
+      "e-Go-Bus"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./app/assets/images/logo.png",
     "appEntry": "expo-router/entry",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "",
+      "image": "./app/assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./app/assets/images/logo.png",
+        "foregroundImage": "./app/assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.kcjod.eGoBus"
@@ -34,7 +36,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "b5e7423f-630e-42c1-aa78-e7a8665ff2b2"
+        "projectId": "daf5418d-ee02-4e5f-a321-f28a64b425a3"
       }
     }
   }
