@@ -13,7 +13,7 @@ const Index = () => {
     // Animate the loading bar width over 3 seconds
     Animated.timing(loadingBarWidth, {
       toValue: 150,        // Final width of the loading bar
-      duration: 4000,      // Duration in milliseconds
+      duration: 3000,      // Duration in milliseconds
       useNativeDriver: false,
     }).start();
 

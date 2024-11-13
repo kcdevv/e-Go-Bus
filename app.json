@@ -6,10 +6,6 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./app/assets/images/logo.png",
-    "appEntry": "expo-router/entry",
-    "expo": {
-      "jsEngine": "jsc"
-    },
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./app/assets/images/logo.png",
