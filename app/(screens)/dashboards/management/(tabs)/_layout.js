@@ -23,19 +23,30 @@ export default function ManagementDashboardLayout() {
   };
 
   const renderTabIcon = (source, focused) => (
-    <Image
-      source={source}
+    <View
       style={{
-        marginBottom: 50,
-        backgroundColor: "#FCD32D",
-        width: focused ? 60 : 50, // Increase size if active
-        height: focused ? 60 : 50, // Increase size if active
+        width: focused ? 60 : 50,
+        height: focused ? 60 : 50,
         borderRadius: 30, // Circular shape
-        borderColor: focused ? "white" : "transparent", // Optional border for active tab
+        backgroundColor: "#FCD32D",
+        borderColor: focused ? "white" : "transparent",
         borderWidth: focused ? 4 : 0,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 50,
       }}
-    />
+    >
+      <Image
+        source={source}
+        style={{
+          width: "70%", // Smaller width to prevent filling the circle
+          height: "70%", // Smaller height to prevent filling the circle
+          resizeMode: "contain",
+        }}
+      />
+    </View>
   );
+  
 
   return (
 
@@ -72,7 +83,7 @@ export default function ManagementDashboardLayout() {
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/driver.png"), focused), // Replace with your image path
+                renderTabIcon(require("../../../../assets/images/msg.png"), focused), // Replace with your image path
             }}
           />
           <Tabs.Screen
@@ -80,7 +91,7 @@ export default function ManagementDashboardLayout() {
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/map.png"), focused), // Replace with your image path
+                renderTabIcon(require("../../../../assets/images/bus.png"), focused), // Replace with your image path
             }}
           />
           <Tabs.Screen
@@ -88,7 +99,7 @@ export default function ManagementDashboardLayout() {
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/student.png"), focused), // Replace with your image path
+                renderTabIcon(require("../../../../assets/images/details.png"), focused), // Replace with your image path
             }}
           />
         </Tabs>
