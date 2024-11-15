@@ -39,7 +39,7 @@
 
 - **Frontend**: React Native with Expo
 - **UI Styling**: NativeWind (for Tailwind CSS-inspired styling)
-- **Navigation**: React Navigation
+- **Navigation**: React Navigation and Google Maps
 - **Backend & API**: Planned integration with GPS and notification services
 
 ---
