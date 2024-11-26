@@ -8,7 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 const screenWidth = Dimensions.get("window").width;
 
-export default function ParentDashboardLayout() {
+export default function DriverDashboardLayout() {
   const [activeTab, setActiveTab] = useState("MapScreen");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuAnimation] = useState(new Animated.Value(screenWidth));
@@ -39,20 +39,21 @@ export default function ParentDashboardLayout() {
       <Image
         source={source}
         style={{
-          width: "90%", // Smaller width to prevent filling the circle
-          height: "90%", // Smaller height to prevent filling the circle
+          width: "70%", // Smaller width to prevent filling the circle
+          height: "70%", // Smaller height to prevent filling the circle
           resizeMode: "contain",
         }}
       />
     </View>
   );
+  
 
   return (
 
 
     <View style={tw`flex-1 shadow-2xl`}>
       {/* Header with Hamburger Menu */}
-      <View style={[tw`flex-row items-center justify-between p-4 pt-10`, { backgroundColor: "#FCD32D" }]}>
+      <View style={[tw`flex-row items-center justify-between p-4 pt-5`, { backgroundColor: "#FCD32D" }]}>
         <Text style={tw`text-lg font-bold`}>e-Go Bus</Text>
         <TouchableOpacity onPress={toggleMenu}>
           <FontAwesome name="bars" size={24} color="black" />
@@ -78,11 +79,11 @@ export default function ParentDashboardLayout() {
         >
 
           <Tabs.Screen
-            name="DriverDetails"
+            name="AlertScreen"
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/driver.png"), focused), // Replace with your image path
+                renderTabIcon(require("../../../../assets/images/msg.png"), focused), // Replace with your image path
             }}
           />
           <Tabs.Screen
@@ -90,15 +91,15 @@ export default function ParentDashboardLayout() {
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/map.png"), focused), // Replace with your image path
+                renderTabIcon(require("../../../../assets/images/bus.png"), focused), // Replace with your image path
             }}
           />
           <Tabs.Screen
-            name="StudentDetails"
+            name="Attendance"
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/student.png"), focused), // Replace with your image path
+                renderTabIcon(require("../../../../assets/images/details.png"), focused), // Replace with your image path
             }}
           />
         </Tabs>
@@ -127,13 +128,7 @@ export default function ParentDashboardLayout() {
               <View style={tw`flex-1 `}>
                 <View style={tw``}>
                   <Text style={tw`text-lg mb-4 ml-10`}>
-                    <Link href="/(screens)/dashboards/parent/MenuComponents/Attendance">Attendance</Link>
-                  </Text>
-                  <Text style={tw`text-lg mb-4 ml-10`}>
-                    <Link href="/(screens)/dashboards/parent/MenuComponents/MissingItemsNotification">Missing Items</Link>
-                  </Text>
-                  <Text style={tw`text-lg mb-4 ml-10`}>
-                    <Link href="/(screens)/dashboards/parent/MenuComponents/FAQPage">FAQs</Link>
+                    <Link href="/(screens)/dashboards/management/MenuComponents/FAQPage">FAQs</Link>
                   </Text>
                 </View>
                 <View style={tw`flex justify-center items-center absolute bottom-5 left-12 `}>
@@ -148,9 +143,6 @@ export default function ParentDashboardLayout() {
       )}
 
     </View>
-
-
-
 
   );
 }

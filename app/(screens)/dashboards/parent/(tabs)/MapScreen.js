@@ -37,13 +37,18 @@ const MapScreen = () => {
       >
         {locations.map((location) => (
           <Marker
-            key={location.id}
-            coordinate={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            title={location.title}
+          key={location.id}
+          coordinate={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+          }}
+          title={location.title}
+        >
+          <Image
+            source={require("../../../../assets/images/bus.png")}
+            style={{ width: 30, height: 30 }}
           />
+        </Marker>
         ))}
       </MapView>
 

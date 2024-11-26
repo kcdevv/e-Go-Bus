@@ -16,12 +16,22 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location for maps",
+        "NSLocationAlwaysUsageDescription": "We need your location for maps and directions",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/images/icon.png",
@@ -40,7 +50,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "9354e74d-3ffd-4e84-a474-20ad78b3dcbc"
+        "projectId": "756ff221-3db8-4bc3-869b-6ba23f1a13e1"
       }
     }
   }
