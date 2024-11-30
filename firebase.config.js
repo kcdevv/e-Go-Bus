@@ -18,6 +18,9 @@ const firebaseConfig = {
   databaseURL: Constants.expoConfig.extra.FIREBASE_DATABASE_URL,
 };
 
+// Log to ensure you're reading the config properly
+console.log('Project ID:', Constants.expoConfig.extra.FIREBASE_PROJECT_ID);
+
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Storage and Database
