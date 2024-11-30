@@ -23,6 +23,9 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         }
+      },
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "android": {
