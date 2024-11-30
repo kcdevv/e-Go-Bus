@@ -4,7 +4,7 @@ import tw from 'tailwind-react-native-classnames';
 
 const AlertScreen = () => {
   return (
-    <View style={tw`flex-1 bg-white items-center justify-evenly py-5 px-4`}>
+    <View style={tw`flex-1 w-full h-full bg-white items-center justify-evenly py-5 px-4`}>
       
       {/* Alert Text */}
       <Text style={tw`text-xl font-bold text-center text-black`}>
@@ -15,7 +15,7 @@ const AlertScreen = () => {
       <View style={tw`my-5`}>
         <Image
           source={require("../../../../assets/images/sos-icon-removebg-preview.png")}
-          style={tw`w-30 h-30`}
+          style={tw`w-32 h-32`}
         />
       </View>
 

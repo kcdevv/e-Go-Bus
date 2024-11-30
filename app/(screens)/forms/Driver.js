@@ -3,30 +3,47 @@ import {
   Text,
   TextInput,
   View,
-  Button,
   TouchableOpacity,
 } from "react-native";
 import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Driver = () => {
   const [schoolID, setSchoolID] = useState("");
   const [busID, setBusID] = useState(null);
   const [driverID, setDriverID] = useState("");
-  const navigation = useNavigation()
+  const [tripNumber, setTripNumber] = useState(""); // New state for trip number
+  const navigation = useNavigation();
 
-  const handleSubmit = () => {
-    console.log("School ID:", schoolID);
-    console.log("Bus ID:", busID);
-    console.log("Driver ID:", driverID);
+  const handleSubmit = async () => {
+    try {
+      // Store form data in AsyncStorage
+      await AsyncStorage.setItem('schoolID', schoolID);
+      await AsyncStorage.setItem('busID', busID ? busID : ''); // Handle optional busID
+      await AsyncStorage.setItem('driverID', driverID);
+      await AsyncStorage.setItem('tripNumber', tripNumber);
+  
+      console.log("Form data stored in AsyncStorage");
+    } catch (error) {
+      console.error("Error storing data in AsyncStorage:", error);
+    }
+  
+    // Navigate to the dashboard
     navigation.reset({
       index: 0,
-      routes: [{ name: "dashboards/driver" }],
+      routes: [
+        {
+          name: "dashboards/driver",
+        },
+      ],
     });
   };
+  
 
-  const disabled = schoolID.length === 0 || driverID.length === 0;
+  const disabled =
+    schoolID.length === 0 || driverID.length === 0 || tripNumber.length === 0;
 
   return (
     <View
@@ -62,6 +79,15 @@ const Driver = () => {
         placeholder="Bus ID (optional)"
         value={busID}
         onChangeText={setBusID}
+      />
+      <TextInput
+        style={[
+          tw`w-full px-2 py-3 mb-4 rounded-lg border-2 border-yellow-200`,
+          { backgroundColor: "#F9F3F3" },
+        ]}
+        placeholder="Trip ID"
+        value={tripNumber}
+        onChangeText={setTripNumber}
       />
       <TouchableOpacity
         style={[

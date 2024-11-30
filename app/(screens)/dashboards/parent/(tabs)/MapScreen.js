@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Image } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import tw from 'tailwind-react-native-classnames';
 import * as Location from 'expo-location';
