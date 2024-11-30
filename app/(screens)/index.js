@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import tw from "tailwind-react-native-classnames";
 import LottieView from "lottie-react-native";
-// import { registerDeviceToken } from "./services/fetchTokenAndSaveRDB";
+import registerDeviceToken from "./services/fetchTokenAndSaveRDB";
 
 const Index = () => {
   const router = useRouter();
@@ -12,9 +12,10 @@ const Index = () => {
   // Start the loading bar animation and navigate after 3 seconds
   useEffect(() => {
     // Register the device token
-    // registerDeviceToken('ST004', 'stshashyd1234', 'B001', 'T001').catch((err) =>
-    //   console.error("Failed to register device token:", err)
-    // );
+    // 'ST004', 'stshashyd1234', 'B001', 'T001'
+    registerDeviceToken().catch((err) =>
+      console.error("Failed to register device token:", err)
+    );
     // Animate the loading bar width over 3 seconds
     Animated.timing(loadingBarWidth, {
       toValue: 150,        // Final width of the loading bar

@@ -49,14 +49,20 @@
       "expo-router"
     ],
     "extra": {
-      "FIREBASE_API_KEY": "AIzaSyD4Avw69zsmnjTFkw4VLmAOzDgP0EZFV-A" ,
+      "FIREBASE_API_KEY": "AIzaSyD4Avw69zsmnjTFkw4VLmAOzDgP0EZFV-A",
       "FIREBASE_AUTH_DOMAIN": "egobus-5be34.firebaseapp.com",
       "FIREBASE_PROJECT_ID": "egobus-5be34",
       "FIREBASE_STORAGE_BUCKET": "egobus-5be34.firebasestorage.app",
       "FIREBASE_MESSAGING_SENDER_ID": "958013905644",
       "FIREBASE_APP_ID": "1:958013905644:web:5ec719d25ef14de82223c9",
       "FIREBASE_MEASUREMENT_ID": "G-C2MY4QPES6",
-      "FIREBASE_DATABASE_URL": "https://egobus-5be34-default-rtdb.firebaseio.com"
+      "FIREBASE_DATABASE_URL": "https://egobus-5be34-default-rtdb.firebaseio.com",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "9354e74d-3ffd-4e84-a474-20ad78b3dcbc"
+      }
     }
   }
 }

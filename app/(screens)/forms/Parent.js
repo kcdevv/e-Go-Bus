@@ -19,35 +19,45 @@ const Parent = () => {
   const navigation = useNavigation();
 
   const handleSubmit = async () => {
-    const validationResult = await validateFields(schoolID, busID, studentID, tripID);
-
-    if (validationResult !== true) {
-      Alert.alert("Validation Failed", validationResult);
-      return;
-    }
-
-    let profilePicUrl = null;
-    if (selectedImage) {
-      try {
-        profilePicUrl = await uploadProfileImage(selectedImage, studentID, schoolID);
-      } catch (error) {
-        Alert.alert("Error", "Failed to upload profile image");
+    console.log("handleSubmit called");
+  
+    try {
+      // Adding logging before validation
+      console.log("Validating fields...");
+      const validationResult = await validateFields(schoolID, busID, studentID, tripID);
+      console.log("Validation result:", validationResult);
+  
+      if (validationResult !== true) {
+        Alert.alert("Validation Failed", validationResult);
         return;
       }
-    }
-
-    try {
-      const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl);
-      console.log("Profile Data:", response);
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "dashboards/parent" }],
-      });
+  
+      let profilePicUrl = null;
+      if (selectedImage) {
+        try {
+          profilePicUrl = await uploadProfileImage(selectedImage, studentID, schoolID);
+        } catch (error) {
+          Alert.alert("Error", "Failed to upload profile image");
+          return;
+        }
+      }
+  
+      try {
+        const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl);
+        console.log("Profile Data:", response);
+  
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "dashboards/parent" }],
+        });
+      } catch (error) {
+        console.error("Error during submission:", error);
+      }
     } catch (error) {
-      console.error("Error during submission:", error);
+      console.error("Error in handleSubmit:", error);
     }
   };
+  
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
