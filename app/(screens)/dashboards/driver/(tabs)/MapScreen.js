@@ -6,11 +6,12 @@ import { database } from "../../../../../firebase.config";
 import {
   loadStoredData,
   getLocationAsync,
-  updateFirebaseData
+  updateFirebaseData,
 } from "../../../services/driverService";
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
+  const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
   const [heading, setHeading] = useState(0);
   const [busId, setBusId] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
@@ -20,15 +21,14 @@ const MapScreen = () => {
   const rotationValue = useRef(new Animated.Value(0)).current;
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
-  const magnetometerRef = useRef({ x: 0, y: 0, z: 0 });
 
   // Calculate heading using arctangent
   const calculateHeading = useCallback(() => {
-    const { x, y } = magnetometerRef.current;
+    const { x, y } = magnetometerData;
     let angle = Math.atan2(y, x) * (180 / Math.PI);
     if (angle < 0) angle += 360;
     return angle;
-  }, []);
+  }, [magnetometerData]);
 
   // Handle location update
   const handleLocationUpdate = useCallback(async () => {
@@ -111,11 +111,7 @@ const MapScreen = () => {
   useEffect(() => {
     Magnetometer.setUpdateInterval(100);
     const headingListener = Magnetometer.addListener((data) => {
-      magnetometerRef.current = {
-        x: data.x,
-        y: data.y,
-        z: data.z,
-      };
+      setMagnetometerData(data);
     });
 
     return () => headingListener.remove();
@@ -153,7 +149,7 @@ const MapScreen = () => {
             style={[
               styles.markerImage,
               {
-                transform: [{ rotate: `${heading}deg` }],
+                transform: [{ rotate }],
               },
             ]}
           />

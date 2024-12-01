@@ -54,11 +54,6 @@ const Parent = () => {
           index: 0,
           routes: [{ name: "dashboards/parent" }],
         });
-
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "dashboards/parent" }],
-        });
       } catch (error) {
         console.error("Error during submission:", error);
       }

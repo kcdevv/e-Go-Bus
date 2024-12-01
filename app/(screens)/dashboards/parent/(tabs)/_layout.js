@@ -4,7 +4,8 @@ import { Image, View, Text, TouchableOpacity, Animated, Dimensions } from "react
 import { FontAwesome } from "@expo/vector-icons";
 import tw from "tailwind-react-native-classnames"
 import { LinearGradient } from "expo-linear-gradient";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -12,6 +13,8 @@ export default function ParentDashboardLayout() {
   const [activeTab, setActiveTab] = useState("MapScreen");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuAnimation] = useState(new Animated.Value(screenWidth));
+
+  const router = useRouter();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -46,6 +49,14 @@ export default function ParentDashboardLayout() {
       />
     </View>
   );
+
+
+  const handleLogout = async () => {
+      await AsyncStorage.clear()
+      console.log('Cleared AsyncStorage');
+      console.log('parent logged out');
+      router.replace("WhoYouAre");
+  }
 
   return (
 
@@ -137,7 +148,7 @@ export default function ParentDashboardLayout() {
                   </Text>
                 </View>
                 <View style={tw`flex justify-center items-center absolute bottom-5 left-12 `}>
-                  <TouchableOpacity style={tw`mt-auto bg-white p-3 w-28 rounded-lg`}>
+                  <TouchableOpacity onPress={handleLogout} style={tw`mt-auto bg-white p-3 w-28 rounded-lg`}>
                     <Text style={tw`text-center font-bold `}>Log out</Text>
                   </TouchableOpacity>
                 </View>
