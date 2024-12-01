@@ -51,6 +51,7 @@ const registerDeviceToken = async (schoolID, studentID, busID, tripID) => {
         console.log("Device token updated in existing student node:", token);
       }
     } else {
+      console.log('token: ' + token);
       console.log("Device token unchanged, no update required.");
     }
 

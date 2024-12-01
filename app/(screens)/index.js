@@ -6,43 +6,55 @@ import LottieView from "lottie-react-native";
 import registerDeviceToken from "./services/fetchTokenAndSaveRDB";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
-
 const Index = () => {
   const router = useRouter();
   const loadingBarWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Call registerDeviceToken here
-    const setupToken = async () => {
+    const setupTokenAndNavigate = async () => {
       try {
-        const schoolID = await AsyncStorage.getItem("schoolID"); // Fetch schoolID
-        const busID = await AsyncStorage.getItem("busID"); // Fetch schoolID
-        const tripID = await AsyncStorage.getItem("tripID"); // Fetch schoolID
-        const studentID = await AsyncStorage.getItem("studentID"); // Fetch studentID
-        if (schoolID && studentID && busID && tripID) {
-          await registerDeviceToken(schoolID, studentID, busID, tripID);
-        } else {
-          console.warn("SchoolID or StudentID not found in local storage.");
-        }
+        const schoolID = await AsyncStorage.getItem("schoolID");
+        const busID = await AsyncStorage.getItem("busID");
+        const tripID = await AsyncStorage.getItem("tripID");
+        const studentID = await AsyncStorage.getItem("studentID");
+        const driverID = await AsyncStorage.getItem("driverID");
+        const isManagement = await AsyncStorage.getItem("isManagement") === "true";
+
+        console.log("SchoolID:", schoolID);
+        console.log("BusID:", busID);
+        console.log("TripID:", tripID);
+        console.log("StudentID:", studentID);
+        console.log("DriverID:", driverID);
+        console.log("IsManagement:", isManagement);
+
+        // Wait for the animation to complete (3 seconds)
+        setTimeout(async () => {
+          if (schoolID && studentID && busID && tripID) {
+            await registerDeviceToken(schoolID, studentID, busID, tripID);
+            router.replace("dashboards/parent"); // Navigate to Parent Dashboard
+          } else if (schoolID && driverID && busID && tripID) {
+            router.replace("dashboards/driver"); // Navigate to Driver Dashboard
+          } else if (isManagement) {
+            router.replace("dashboards/management"); // Navigate to Management Dashboard
+          } else {
+            console.warn("No valid user type found. Redirecting to WhoYouAre.");
+            router.replace("/WhoYouAre"); // Default route
+          }
+        }, 3000); // Animation duration in milliseconds
       } catch (error) {
-        console.error("Failed to register device token:", error);
+        console.error("Error during setup:", error);
+        router.replace("/WhoYouAre"); // Navigate to a safe fallback
       }
     };
-    setupToken();
 
-    // Animate the loading bar and navigate
+    setupTokenAndNavigate();
+
+    // Animate the loading bar
     Animated.timing(loadingBarWidth, {
       toValue: 150,
       duration: 3000,
       useNativeDriver: false,
     }).start();
-
-    const timer = setTimeout(() => {
-      router.replace("/WhoYouAre");
-    }, 4000);
-
-    return () => clearTimeout(timer);
   }, [router]);
 
   return (

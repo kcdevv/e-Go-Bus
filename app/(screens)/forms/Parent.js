@@ -6,7 +6,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
+import registerDeviceToken from "../services/fetchTokenAndSaveRDB";
 import {
   uploadProfileImage,
   validateFields,
@@ -46,7 +46,8 @@ const Parent = () => {
       }
 
       try {
-        const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl);
+        const deviceToken = await registerDeviceToken(schoolID, studentID, busID, tripID);
+        const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl, deviceToken);
         console.log("Profile Data:", response);
         
         navigation.reset({
