@@ -7,7 +7,7 @@ import {
   loadStoredData,
   getLocationAsync,
   updateFirebaseData,
-} from "../../../services/driverService";
+} from "../services/locationService";
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -145,7 +145,7 @@ const MapScreen = () => {
           title="Your Location"
         >
           <Animated.Image
-            source={require("../../../../assets/images/bus.png")}
+            source={require("../../../../assets/icons/bus.png")}
             style={[
               styles.markerImage,
               {
