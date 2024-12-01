@@ -1,72 +1,45 @@
-import React, { useEffect, useState, useRef } from "react";
-import { StyleSheet, Alert, Animated, Easing } from "react-native";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { StyleSheet, Alert, Animated, Easing, Platform } from "react-native";
 import MapView, { Marker } from "react-native-maps";
-import * as Location from "expo-location";
 import { Magnetometer } from "expo-sensors";
-import { ref, set } from "firebase/database";
-import { database } from "../../../../../firebase.config"; // Adjust the path as necessary
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import { database } from "../../../../../firebase.config";
+import {
+  loadStoredData,
+  getLocationAsync,
+  updateFirebaseData
+} from "../../../services/driverService";
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
-  const [heading, setHeading] = useState(0); // Compass heading
+  const [heading, setHeading] = useState(0);
   const [busId, setBusId] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
   const [driverId, setDriverId] = useState(null);
   const [tripNumber, setTripNumber] = useState(null);
-  const rotation = useRef(new Animated.Value(90)).current; // Set initial rotation to 90 degrees
-  const mapRef = useRef(null); // Reference for MapView
 
-  useEffect(() => {
-    // Function to retrieve busId, schoolId, driverId, and tripNumber from AsyncStorage
-    const loadStoredData = async () => {
-      try {
-        const storedBusId = await AsyncStorage.getItem('busID');
-        const storedSchoolId = await AsyncStorage.getItem('schoolID');
-        const storedDriverId = await AsyncStorage.getItem('driverID');
-        const storedTripNumber = await AsyncStorage.getItem('tripNumber');
+  const rotationValue = useRef(new Animated.Value(0)).current;
+  const mapRef = useRef(null);
+  const locationIntervalRef = useRef(null);
+  const magnetometerRef = useRef({ x: 0, y: 0, z: 0 });
 
-        if (storedBusId) setBusId(storedBusId);
-        if (storedSchoolId) setSchoolId(storedSchoolId);
-        if (storedDriverId) setDriverId(storedDriverId);
-        if (storedTripNumber) setTripNumber(storedTripNumber);
+  // Calculate heading using arctangent
+  const calculateHeading = useCallback(() => {
+    const { x, y } = magnetometerRef.current;
+    let angle = Math.atan2(y, x) * (180 / Math.PI);
+    if (angle < 0) angle += 360;
+    return angle;
+  }, []);
 
-        console.log("Loaded stored data:", {
-          busId: storedBusId,
-          schoolId: storedSchoolId,
-          driverId: storedDriverId,
-          tripNumber: storedTripNumber,
-        });
-      } catch (error) {
-        console.error("Error retrieving data from AsyncStorage:", error);
-      }
-    };
-
-    // Load stored data when the component is mounted
-    loadStoredData();
-
-    // Set the location and heading interval to 3 seconds
-    const locationInterval = setInterval(() => {
-      getLocation();
-    }, 3000);
-
-    // Cleanup on unmount
-    return () => {
-      clearInterval(locationInterval); // Clear interval when component unmounts
-      Magnetometer.removeAllListeners(); // Clean up the magnetometer listener
-    };
-  }, []); // Empty dependency array to run once when the component mounts
-
-  // Function to fetch location and send data to Firebase
-  const getLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission Denied", "Allow location access to use this feature.");
+  // Handle location update
+  const handleLocationUpdate = useCallback(async () => {
+    if (!busId || !schoolId || !tripNumber) {
+      console.warn("Missing trip details for location update");
       return;
     }
 
     try {
-      const location = await Location.getCurrentPositionAsync({});
+      const location = await getLocationAsync();
+      const currentHeading = calculateHeading();
       const updatedLocation = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -74,63 +47,82 @@ const MapScreen = () => {
         longitudeDelta: 0.01,
       };
 
-      // Update state only if location has changed
       setUserLocation(updatedLocation);
+      setHeading(currentHeading);
 
-      // Zoom to the user's location on the map
+      // Animate rotation based on heading
+      Animated.timing(rotationValue, {
+        toValue: currentHeading,
+        duration: 300,
+        useNativeDriver: Platform.OS !== "web",
+        easing: Easing.linear,
+      }).start();
+
       if (mapRef.current) {
         mapRef.current.animateToRegion(updatedLocation, 1000);
       }
 
-      console.log("Location updated:", updatedLocation);
-
-      // Send location and heading data to Firebase Realtime Database
-      if (busId && schoolId && tripNumber) {
-        const dbRef = ref(database, `schools/${schoolId}/buses/${busId}/trips/${tripNumber}`);
-        await set(dbRef, {
-          busId,
-          schoolId,
-          driverId,
-          tripNumber,
-          location: {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          },
-          heading, // Send the heading along with the location
-          timestamp: new Date().toISOString(),
-        });
-      }
+      await updateFirebaseData(database, {
+        busId,
+        schoolId,
+        driverId,
+        tripNumber,
+        location,
+        heading: currentHeading,
+      });
     } catch (error) {
-      console.error("Error fetching or updating location:", error);
-      Alert.alert("Error", "Failed to fetch or update location.");
+      console.error("Location update failed:", error);
+      Alert.alert("Location Error", error.message);
     }
-  };
+  }, [busId, schoolId, tripNumber, calculateHeading, driverId]);
 
-  // Function to get heading (direction) - Now in useEffect only once
+  // Initialize trip data and set up location tracking
   useEffect(() => {
+    const initializeTracking = async () => {
+      try {
+        const storedData = await loadStoredData();
+        if (storedData) {
+          setBusId(storedData.busId);
+          setSchoolId(storedData.schoolId);
+          setDriverId(storedData.driverId);
+          setTripNumber(storedData.tripNumber);
+        } else {
+          Alert.alert("Error", "Unable to load trip information");
+          return;
+        }
+
+        locationIntervalRef.current = setInterval(handleLocationUpdate, 3000);
+      } catch (error) {
+        console.error("Tracking initialization error:", error);
+      }
+    };
+
+    initializeTracking();
+
+    return () => {
+      if (locationIntervalRef.current) {
+        clearInterval(locationIntervalRef.current);
+      }
+      Magnetometer.removeAllListeners();
+    };
+  }, [handleLocationUpdate]);
+
+  // Magnetometer heading listener
+  useEffect(() => {
+    Magnetometer.setUpdateInterval(100);
     const headingListener = Magnetometer.addListener((data) => {
-      const { x, y } = data;
-      let angle = Math.atan2(y, x) * (180 / Math.PI); // Convert radians to degrees
-      if (angle < 0) angle += 360; // Normalize to 0-360
-      setHeading(angle);
-
-      // Smoothly animate the rotation of the marker
-      Animated.timing(rotation, {
-        toValue: angle + 90, // Add 90 degrees to the rotation for correct direction
-        duration: 500, // Set duration for slow rotation
-        useNativeDriver: true,
-        easing: Easing.out(Easing.ease), // Apply easing function
-      }).start();
-
-      console.log("Heading updated:", angle); // Log heading updates
+      magnetometerRef.current = {
+        x: data.x,
+        y: data.y,
+        z: data.z,
+      };
     });
 
-    // Cleanup the heading listener when component unmounts
     return () => headingListener.remove();
-  }, []); // Empty dependency array ensures it runs once when the component mounts
+  }, []);
 
-  // Interpolation for marker rotation
-  const rotate = rotation.interpolate({
+  // Interpolate rotation for marker
+  const rotate = rotationValue.interpolate({
     inputRange: [0, 360],
     outputRange: ["0deg", "360deg"],
   });
@@ -139,12 +131,14 @@ const MapScreen = () => {
     <MapView
       ref={mapRef}
       style={styles.map}
-      initialRegion={userLocation || {
-        latitude: 17.385044, // Default to Hyderabad
-        longitude: 78.486671,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      }}
+      initialRegion={
+        userLocation || {
+          latitude: 17.385044,
+          longitude: 78.486671,
+          latitudeDelta: 0.1,
+          longitudeDelta: 0.1,
+        }
+      }
     >
       {userLocation && (
         <Marker
@@ -156,7 +150,12 @@ const MapScreen = () => {
         >
           <Animated.Image
             source={require("../../../../assets/images/bus.png")}
-            style={[styles.markerImage, { transform: [{ rotate: rotate }] }]} // Apply rotation based on heading
+            style={[
+              styles.markerImage,
+              {
+                transform: [{ rotate: `${heading}deg` }],
+              },
+            ]}
           />
         </Marker>
       )}
@@ -170,8 +169,9 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   markerImage: {
-    width: 30,
-    height: 30,
+    width: 50,
+    height: 50,
+    resizeMode: "contain",
   },
 });
 
