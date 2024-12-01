@@ -4,26 +4,40 @@ import { useRouter } from "expo-router";
 import tw from "tailwind-react-native-classnames";
 import LottieView from "lottie-react-native";
 import registerDeviceToken from "./services/fetchTokenAndSaveRDB";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+
 
 const Index = () => {
   const router = useRouter();
   const loadingBarWidth = useRef(new Animated.Value(0)).current;
 
-  // Start the loading bar animation and navigate after 3 seconds
   useEffect(() => {
-    // Register the device token
-    // 'ST004', 'stshashyd1234', 'B001', 'T001'
-    registerDeviceToken().catch((err) =>
-      console.error("Failed to register device token:", err)
-    );
-    // Animate the loading bar width over 3 seconds
+    // Call registerDeviceToken here
+    const setupToken = async () => {
+      try {
+        const schoolID = await AsyncStorage.getItem("schoolID"); // Fetch schoolID
+        const busID = await AsyncStorage.getItem("busID"); // Fetch schoolID
+        const tripID = await AsyncStorage.getItem("tripID"); // Fetch schoolID
+        const studentID = await AsyncStorage.getItem("studentID"); // Fetch studentID
+        if (schoolID && studentID && busID && tripID) {
+          await registerDeviceToken(schoolID, studentID, busID, tripID);
+        } else {
+          console.warn("SchoolID or StudentID not found in local storage.");
+        }
+      } catch (error) {
+        console.error("Failed to register device token:", error);
+      }
+    };
+    setupToken();
+
+    // Animate the loading bar and navigate
     Animated.timing(loadingBarWidth, {
-      toValue: 150,        // Final width of the loading bar
-      duration: 3000,      // Duration in milliseconds
+      toValue: 150,
+      duration: 3000,
       useNativeDriver: false,
     }).start();
 
-    // Redirect to "WhoYouAre" page after 4 seconds, using replace to prevent going back to the splash screen
     const timer = setTimeout(() => {
       router.replace("/WhoYouAre");
     }, 4000);
@@ -38,15 +52,18 @@ const Index = () => {
         source={require("../assets/animations/splashScreenAnimation.json")}
         autoPlay
         loop
-        speed={2.5} // Increase speed for faster animation
+        speed={2.5}
       />
       <Text style={{ fontSize: 25, fontWeight: "bold" }}>
-        <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}>- </Text>
+        <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}>
+          -{" "}
+        </Text>
         EGO BUS
-        <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}> -</Text>
+        <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}>
+          {" "}
+          -
+        </Text>
       </Text>
-
-      {/* Animated Loading Bar */}
       <Animated.View style={[styles.loadingBar, { width: loadingBarWidth }]} />
     </View>
   );
@@ -56,9 +73,9 @@ export default Index;
 
 const styles = StyleSheet.create({
   loadingBar: {
-    height: 6,                // Height of the loading bar
-    backgroundColor: "#FCD32D", // Color of the loading bar
-    borderRadius: 3,          // Round the edges
+    height: 6,
+    backgroundColor: "#FCD32D",
+    borderRadius: 3,
     marginTop: 16,
   },
 });

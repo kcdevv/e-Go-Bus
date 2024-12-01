@@ -3,6 +3,7 @@ import { ref as dbRef, get, update, push, set } from 'firebase/database';  // Im
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Alert } from 'react-native';
 
+
 // Upload profile image to Firebase Storage
 export const uploadProfileImage = async (uri, studentID, schoolID) => {
   const response = await fetch(uri);
@@ -43,31 +44,31 @@ export const validateFields = async (schoolID, busID, studentID, tripID) => {
 };
 
 // Update profile picture and device token in Firebase
-export const updateProfilePic = async (schoolID, busID, tripID, studentID, profilePicUrl, deviceToken='sfafafaaf') => {
+export const updateProfilePic = async (schoolID, busID, tripID, studentID, profilePicUrl, deviceToken) => {
   const db = database;
   const studentRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentID}`);
   const tripTokensRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/tokens`);
 
   try {
-    // Ensure the student path exists; if not, create it
+    // Fetch existing student data
     const studentSnapshot = await get(studentRef);
     if (!studentSnapshot.exists()) {
       await set(studentRef, {
-        profilePic: '',
-        token: '', // Initialize with default values
+        profilePic: profilePicUrl || "",
+        token: deviceToken || "",
+      });
+    } else {
+      // Update only provided fields
+      await update(studentRef, {
+        ...(profilePicUrl && { profilePic: profilePicUrl }),
+        ...(deviceToken && { token: deviceToken }),
       });
     }
 
-    // Update student data
-    await update(studentRef, {
-      profilePic: profilePicUrl,
-      token: deviceToken,
-    });
-
-    
-
-    // Push the token to the tokens array under the trip
-    await push(tripTokensRef, deviceToken);
+    // Push the token to the tokens array under the trip if it's valid
+    if (deviceToken) {
+      await push(tripTokensRef, deviceToken);
+    }
 
     // Fetch additional data
     const schoolSnapshot = await get(dbRef(db, `schools/${schoolID}`));
@@ -84,11 +85,12 @@ export const updateProfilePic = async (schoolID, busID, tripID, studentID, profi
       studentDetails,
     };
 
-    Alert.alert('Profile Updated', 'Profile picture has been updated successfully');
+    Alert.alert("Login Successfull", "Welcome to e-GO Bus! we are ready to serve you.");
     return responseData;
   } catch (error) {
-    console.error('Error updating profile:', error);
-    Alert.alert('Error', 'Failed to update profile');
+    console.error("Error updating profile:", error);
+    Alert.alert("Error", "Failed to update profile");
     throw error;
   }
 };
+

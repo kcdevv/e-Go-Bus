@@ -4,6 +4,9 @@ import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+
 import {
   uploadProfileImage,
   validateFields,
@@ -20,18 +23,18 @@ const Parent = () => {
 
   const handleSubmit = async () => {
     console.log("handleSubmit called");
-  
+
     try {
       // Adding logging before validation
       console.log("Validating fields...");
       const validationResult = await validateFields(schoolID, busID, studentID, tripID);
       console.log("Validation result:", validationResult);
-  
+
       if (validationResult !== true) {
         Alert.alert("Validation Failed", validationResult);
         return;
       }
-  
+
       let profilePicUrl = null;
       if (selectedImage) {
         try {
@@ -41,11 +44,16 @@ const Parent = () => {
           return;
         }
       }
-  
+
       try {
         const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl);
         console.log("Profile Data:", response);
-  
+        
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "dashboards/parent" }],
+        });
+
         navigation.reset({
           index: 0,
           routes: [{ name: "dashboards/parent" }],
@@ -57,7 +65,7 @@ const Parent = () => {
       console.error("Error in handleSubmit:", error);
     }
   };
-  
+
 
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
