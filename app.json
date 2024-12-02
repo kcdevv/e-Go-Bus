@@ -2,9 +2,7 @@
   "expo": {
     "name": "e-Go Bus",
     "slug": "e-Go-Bus",
-    "scheme": [
-      "e-Go-Bus"
-    ],
+    "scheme": "e-Go-Bus",
     "newArchEnabled": true,
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,13 +32,21 @@
         "ACCESS_COARSE_LOCATION",
         "INTERNET",
         "ACCESS_NETWORK_STATE",
-        "ACCESS_WIFI_STATE"
+        "ACCESS_WIFI_STATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.kcjod.eGoBus"
+      "package": "com.kcjod.eGoBus",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBjtpKDllff6rIJhy3TW8mt84Ix2RE9Y-4"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -63,6 +69,7 @@
       "eas": {
         "projectId": "9354e74d-3ffd-4e84-a474-20ad78b3dcbc"
       }
-    }
+    },
+    "owner": "ssl123"
   }
 }

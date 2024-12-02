@@ -2,23 +2,26 @@ import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View, Modal, Animated, Easing, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import tw from 'tailwind-react-native-classnames';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {sendNotification} from '../services/sendNotification.service'
 
 const SendMessage = () => {
   const [message, setMessage] = useState('');
-  const [recipients, setRecipients] = useState([]);
   const [isSent, setIsSent] = useState(false);
   const slideAnim = new Animated.Value(-200);
 
   const toggleRecipient = (recipient) => {
-    if (recipients.includes(recipient)) {
-      setRecipients(recipients.filter((r) => r !== recipient));
-    } else {
-      setRecipients([...recipients, recipient]);
-    }
+    // Placeholder for recipient logic
   };
 
-  const handleSend = () => {
-    if (message && recipients.length > 0) {
+
+
+
+  const handleSend = async () => {
+    if (message) {
+      // Send notification
+      await sendNotification(message);
+      console.log('after send notification')
       setIsSent(true);
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -29,7 +32,6 @@ const SendMessage = () => {
 
       // Reset fields after sending
       setMessage('');
-      setRecipients([]);
 
       // Hide confirmation after 3 seconds
       setTimeout(() => {
@@ -43,6 +45,7 @@ const SendMessage = () => {
     }
   };
 
+ 
   return (
     <ScrollView style={tw`flex-1`}>
       <View style={tw`flex-1 justify-center items-center bg-gray-100 p-6 my-5`}>
@@ -61,22 +64,22 @@ const SendMessage = () => {
           />
         </View>
 
-        {/* Recipient Options */}
+        {/* Recipient Options (Not used yet, for future implementation) */}
         <View style={tw`w-11/12 mb-10`}>
           <TouchableOpacity
             onPress={() => toggleRecipient('Driver')}
             style={tw`flex-row items-center mb-4 p-4 rounded-lg shadow-md bg-white`}
           >
-            <FontAwesome name="user" size={24} color={recipients.includes('Driver') ? '#4CAF50' : '#888'} />
-            <Text style={tw`ml-4 text-lg ${recipients.includes('Driver') ? 'text-green-600 font-semibold' : 'text-gray-700'}`}>For Driver</Text>
+            <FontAwesome name="user" size={24} color="#888" />
+            <Text style={tw`ml-4 text-lg text-gray-700`}>For Driver</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => toggleRecipient('Parents')}
             style={tw`flex-row items-center p-4 rounded-lg shadow-md bg-white`}
           >
-            <FontAwesome name="users" size={24} color={recipients.includes('Parents') ? '#4CAF50' : '#888'} />
-            <Text style={tw`ml-4 text-lg ${recipients.includes('Parents') ? 'text-green-600 font-semibold' : 'text-gray-700'}`}>For Parents</Text>
+            <FontAwesome name="users" size={24} color="#888" />
+            <Text style={tw`ml-4 text-lg text-gray-700`}>For Parents</Text>
           </TouchableOpacity>
         </View>
 
