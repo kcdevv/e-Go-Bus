@@ -9,7 +9,7 @@ export const loadStoredData = async () => {
       AsyncStorage.getItem("busID"),
       AsyncStorage.getItem("schoolID"),
       AsyncStorage.getItem("driverID"),
-      AsyncStorage.getItem("tripNumber"),
+      AsyncStorage.getItem("tripID"),
     ]);
 
     if (storedBusId && storedSchoolId && storedDriverId && storedTripNumber) {
@@ -36,7 +36,7 @@ export const getLocationAsync = async () => {
     }
 
     const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
+      accuracy: Location.Accuracy.Highest,
       timeout: 5000,
       maximumAge: 1000,
     });

@@ -10,15 +10,15 @@ import {
 } from "../services/locationService";
 
 const MapScreen = () => {
-  const [userLocation, setUserLocation] = useState(null);
-  const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
-  const [heading, setHeading] = useState(0);
+  const [userLocation, setUserLocation] = useState(null); // User's location
+  const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 }); // Magnetometer data
+  const [heading, setHeading] = useState(0); // Current heading
   const [busId, setBusId] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
   const [driverId, setDriverId] = useState(null);
   const [tripNumber, setTripNumber] = useState(null);
 
-  const rotationValue = useRef(new Animated.Value(0)).current;
+  const rotationValue = useRef(new Animated.Value(0)).current; // Rotation animation
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
 
@@ -26,7 +26,7 @@ const MapScreen = () => {
   const calculateHeading = useCallback(() => {
     const { x, y } = magnetometerData;
     let angle = Math.atan2(y, x) * (180 / Math.PI);
-    if (angle < 0) angle += 360;
+    if (angle < 0) angle += 360; // Normalize angle to 0-360
     return angle;
   }, [magnetometerData]);
 
@@ -109,13 +109,15 @@ const MapScreen = () => {
 
   // Magnetometer heading listener
   useEffect(() => {
-    Magnetometer.setUpdateInterval(100);
-    const headingListener = Magnetometer.addListener((data) => {
-      setMagnetometerData(data);
-    });
+  Magnetometer.setUpdateInterval(100);
+  const headingListener = Magnetometer.addListener((data) => {
+    console.log("Magnetometer Data:", data); // Debugging line
+    setMagnetometerData(data); // Update magnetometer data dynamically
+  });
 
-    return () => headingListener.remove();
-  }, []);
+  return () => headingListener.remove();
+}, []);
+
 
   // Interpolate rotation for marker
   const rotate = rotationValue.interpolate({
@@ -135,6 +137,12 @@ const MapScreen = () => {
           longitudeDelta: 0.1,
         }
       }
+      showsUserLocation // Show user location on the map
+      zoomEnabled // Enable zooming
+      showsCompass // Show compass for orientation
+      showsScale // Show scale
+      pitchEnabled // Allow tilting
+      onRegionChangeComplete={(region) => setUserLocation(region)} // Update location when map moves
     >
       {userLocation && (
         <Marker
