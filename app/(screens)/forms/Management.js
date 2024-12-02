@@ -3,25 +3,35 @@ import {
   Text,
   TextInput,
   View,
-  Button,
   TouchableOpacity,
 } from "react-native";
 import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Management = () => {
   const [schoolID, setSchoolID] = useState("");
   const [password, setPassword] = useState("");
-  const navigation = useNavigation()
+  const navigation = useNavigation();
 
-  const handleSubmit = () => {
-    console.log("School ID:", schoolID);
-    console.log("Password:", password);
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "dashboards/management" }],
-    });
+  const handleSubmit = async () => {
+    try {
+      console.log("School ID:", schoolID);
+      console.log("Password:", password);
+
+      // Store schoolID in AsyncStorage
+      await AsyncStorage.setItem("schoolID", schoolID);
+      console.log("School ID saved to AsyncStorage");
+
+      // Navigate to the dashboard
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "dashboards/management" }],
+      });
+    } catch (error) {
+      console.error("Error saving school ID:", error);
+    }
   };
 
   const disabled = schoolID.length === 0 || password.length === 0;
@@ -50,6 +60,7 @@ const Management = () => {
         ]}
         placeholder="Password"
         value={password}
+        secureTextEntry // Ensures password input is hidden
         onChangeText={setPassword}
       />
       <TouchableOpacity
