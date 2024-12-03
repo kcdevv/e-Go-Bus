@@ -19,7 +19,7 @@ const MapScreen = () => {
   const [driverId, setDriverId] = useState(null);
   const [tripNumber, setTripNumber] = useState(null);
 
-  const rotationValue = useRef(new Animated.Value(0)).current;
+  const rotationValue = useRef(new Animated.Value(0)).current; // Rotation animation
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
 
@@ -175,6 +175,12 @@ const rotateMarker = useCallback((currentHeading) => {
           longitudeDelta: 0.1,
         }
       }
+      showsUserLocation // Show user location on the map
+      zoomEnabled // Enable zooming
+      showsCompass // Show compass for orientation
+      showsScale // Show scale
+      pitchEnabled // Allow tilting
+      onRegionChangeComplete={(region) => setUserLocation(region)} // Update location when map moves
     >
       {userLocation && (
         <Marker
