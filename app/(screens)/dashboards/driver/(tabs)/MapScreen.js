@@ -39,7 +39,7 @@ const MapScreen = () => {
 // Updated rotateMarker function
 const rotateMarker = useCallback((currentHeading) => {
   Animated.timing(rotationValue, {
-    toValue: currentHeading,
+    toValue: currentHeading - 90,
     duration: 300,
     useNativeDriver: Platform.OS !== "web",
     easing: Easing.linear,
@@ -60,7 +60,7 @@ const rotateMarker = useCallback((currentHeading) => {
       setUserLocation(updatedLocation);
 
       if (mapRef.current) {
-        mapRef.current.animateToRegion(updatedLocation, 1000);
+        mapRef.current.animateToRegion(updatedLocation, 500);
       }
 
       return location;
@@ -130,7 +130,7 @@ const rotateMarker = useCallback((currentHeading) => {
           return;
         }
 
-        locationIntervalRef.current = setInterval(handleUpdates, 3000);
+        locationIntervalRef.current = setInterval(handleUpdates, 500);
       } catch (error) {
         console.error("Tracking initialization error:", error);
       }
@@ -175,11 +175,11 @@ const rotateMarker = useCallback((currentHeading) => {
           longitudeDelta: 0.1,
         }
       }
-      showsUserLocation // Show user location on the map
-      zoomEnabled // Enable zooming
-      showsCompass // Show compass for orientation
-      showsScale // Show scale
-      pitchEnabled // Allow tilting
+      showsUserLocation
+      zoomEnabled 
+      showsCompass 
+      showsScale 
+      pitchEnabled 
       onRegionChangeComplete={(region) => setUserLocation(region)} // Update location when map moves
     >
       {userLocation && (
@@ -189,7 +189,7 @@ const rotateMarker = useCallback((currentHeading) => {
             longitude: userLocation.longitude,
           }}
           title="Your Location"
-          style={tw`w-80 h-80`}
+          style={styles.markerImageFence}
         >
           <Animated.Image
             source={require("../../../../assets/icons/bus.png")}
@@ -206,10 +206,15 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  markerImageFence: {
+    width: 85,
+    height: 85,
+  },
   markerImage: {
     width: 45,
     height: 45,
-    resizeMode: "cover",
+    resizeMode: "contain",
+    position: "absolute",
   },
 });
 
