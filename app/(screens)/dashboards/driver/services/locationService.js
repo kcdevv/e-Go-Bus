@@ -9,7 +9,7 @@ export const loadStoredData = async () => {
       AsyncStorage.getItem("busID"),
       AsyncStorage.getItem("schoolID"),
       AsyncStorage.getItem("driverID"),
-      AsyncStorage.getItem("tripNumber"),
+      AsyncStorage.getItem("tripID"),
     ]);
 
     if (storedBusId && storedSchoolId && storedDriverId && storedTripNumber) {

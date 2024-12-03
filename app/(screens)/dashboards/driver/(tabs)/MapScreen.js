@@ -8,11 +8,12 @@ import {
   getLocationAsync,
   updateFirebaseData,
 } from "../services/locationService";
+import tw from "tailwind-react-native-classnames";
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
-  const [heading, setHeading] = useState(0);
+  const [heading, setHeading] = useState(null);
   const [busId, setBusId] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
   const [driverId, setDriverId] = useState(null);
@@ -22,59 +23,97 @@ const MapScreen = () => {
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
 
-  // Calculate heading using arctangent
+  // Function to calculate heading
+  // Updated calculateHeading function
   const calculateHeading = useCallback(() => {
     const { x, y } = magnetometerData;
+  
+    // Directly use x and y without normalizing
     let angle = Math.atan2(y, x) * (180 / Math.PI);
-    if (angle < 0) angle += 360;
+    angle < 0 ? angle = (angle + 360) : (angle);
+    console.log("Angle:",angle);
     return angle;
   }, [magnetometerData]);
+  
 
-  // Handle location update
-  const handleLocationUpdate = useCallback(async () => {
-    if (!busId || !schoolId || !tripNumber) {
-      console.warn("Missing trip details for location update");
-      return;
-    }
+// Updated rotateMarker function
+const rotateMarker = useCallback((currentHeading) => {
+  Animated.timing(rotationValue, {
+    toValue: currentHeading,
+    duration: 300,
+    useNativeDriver: Platform.OS !== "web",
+    easing: Easing.linear,
+  }).start();
+}, []);
 
+
+  // Function to get user location
+  const fetchUserLocation = useCallback(async () => {
     try {
       const location = await getLocationAsync();
-      const currentHeading = calculateHeading();
       const updatedLocation = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
-
       setUserLocation(updatedLocation);
-      setHeading(currentHeading);
-
-      // Animate rotation based on heading
-      Animated.timing(rotationValue, {
-        toValue: currentHeading,
-        duration: 300,
-        useNativeDriver: Platform.OS !== "web",
-        easing: Easing.linear,
-      }).start();
 
       if (mapRef.current) {
         mapRef.current.animateToRegion(updatedLocation, 1000);
       }
 
-      await updateFirebaseData(database, {
-        busId,
-        schoolId,
-        driverId,
-        tripNumber,
-        location,
-        heading: currentHeading,
-      });
+      return location;
     } catch (error) {
-      console.error("Location update failed:", error);
-      Alert.alert("Location Error", error.message);
+      console.error("Failed to fetch location:", error);
+      throw error;
     }
-  }, [busId, schoolId, tripNumber, calculateHeading, driverId]);
+  }, []);
+
+  // Function to update data in Firebase
+  const updateFirebase = useCallback(
+    async (location, currentHeading) => {
+      if (!busId || !schoolId || !tripNumber) {
+        console.warn("Missing trip details for Firebase update");
+        return;
+      }
+
+      try {
+        await updateFirebaseData(database, {
+          busId,
+          schoolId,
+          driverId,
+          tripNumber,
+          location,
+          heading: currentHeading,
+        });
+        console.log("Firebase updated successfully");
+      } catch (error) {
+        console.error("Failed to update Firebase:", error);
+        throw error;
+      }
+    },
+    [busId, schoolId, tripNumber, driverId]
+  );
+
+  // Master function to handle all updates
+  const handleUpdates = useCallback(async () => {
+    try {
+      const location = await fetchUserLocation();
+      let currentHeading = calculateHeading();
+
+      if (currentHeading === null) {
+        console.warn("Invalid heading value. Skipping Firebase update.");
+        return;
+      }
+
+      setHeading(currentHeading);
+      rotateMarker(currentHeading);
+      await updateFirebase(location, currentHeading);
+    } catch (error) {
+      Alert.alert("Update Error", error.message);
+    }
+  }, [fetchUserLocation, calculateHeading, rotateMarker, updateFirebase]);
 
   // Initialize trip data and set up location tracking
   useEffect(() => {
@@ -91,7 +130,7 @@ const MapScreen = () => {
           return;
         }
 
-        locationIntervalRef.current = setInterval(handleLocationUpdate, 3000);
+        locationIntervalRef.current = setInterval(handleUpdates, 3000);
       } catch (error) {
         console.error("Tracking initialization error:", error);
       }
@@ -105,7 +144,7 @@ const MapScreen = () => {
       }
       Magnetometer.removeAllListeners();
     };
-  }, [handleLocationUpdate]);
+  }, [handleUpdates]);
 
   // Magnetometer heading listener
   useEffect(() => {
@@ -113,9 +152,10 @@ const MapScreen = () => {
     const headingListener = Magnetometer.addListener((data) => {
       setMagnetometerData(data);
     });
-
+    console.log("MAgnetometer data:",magnetometerData);
+    
     return () => headingListener.remove();
-  }, []);
+  }, [userLocation]);
 
   // Interpolate rotation for marker
   const rotate = rotationValue.interpolate({
@@ -143,15 +183,11 @@ const MapScreen = () => {
             longitude: userLocation.longitude,
           }}
           title="Your Location"
+          style={tw`w-80 h-80`}
         >
           <Animated.Image
             source={require("../../../../assets/icons/bus.png")}
-            style={[
-              styles.markerImage,
-              {
-                transform: [{ rotate }],
-              },
-            ]}
+            style={[styles.markerImage, { transform: [{ rotate }] }]}
           />
         </Marker>
       )}
@@ -165,9 +201,9 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   markerImage: {
-    width: 50,
-    height: 50,
-    resizeMode: "contain",
+    width: 45,
+    height: 45,
+    resizeMode: "cover",
   },
 });
 
