@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 import Constants from 'expo-constants';
@@ -18,10 +18,12 @@ const firebaseConfig = {
   databaseURL: Constants.expoConfig.extra.FIREBASE_DATABASE_URL,
 };
 
-// Log to ensure you're reading the config properly
-console.log('Project ID:', Constants.expoConfig.extra.FIREBASE_PROJECT_ID);
 
-const app = initializeApp(firebaseConfig);
+let app;
+// Prevent reinitialization of Firebase in hot reload scenarios
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+}
 
 // Initialize Firebase Storage and Database
 const storage = getStorage(app);

@@ -49,6 +49,7 @@ export const updateProfilePic = async (schoolID, busID, tripID, studentID, profi
   const studentRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentID}`);
   const tripTokensRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/tokens`);
 
+  Alert.alert('inside update profile pic')
   try {
     // Fetch existing student data
     const studentSnapshot = await get(studentRef);
@@ -70,21 +71,23 @@ export const updateProfilePic = async (schoolID, busID, tripID, studentID, profi
       await push(tripTokensRef, deviceToken);
     }
 
+    Alert.alert('before fetching additional dets')
+    
     // Fetch additional data
     const schoolSnapshot = await get(dbRef(db, `schools/${schoolID}`));
     const busSnapshot = await get(dbRef(db, `schools/${schoolID}/buses/${busID}`));
     const studentSnapshotAfterUpdate = await get(studentRef);
-
+    
     const schoolName = schoolSnapshot.val()?.name;
     const driverDetails = busSnapshot.val()?.driver;
     const studentDetails = studentSnapshotAfterUpdate.val();
-
+    
     const responseData = {
       schoolName,
       driverDetails,
       studentDetails,
     };
-
+    
     Alert.alert("Login Successfull", "Welcome to e-GO Bus! we are ready to serve you.");
     return responseData;
   } catch (error) {

@@ -1,11 +1,13 @@
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { database } from "../../../firebase.config"; // Adjust the path as needed
+import { database } from "../../../firebase.config"; // Adjust the path if needed
 import { ref as dbRef, update, get, set } from "firebase/database";
 import Constants from "expo-constants";
+import { Alert } from "react-native";
 
 const registerDeviceToken = async (schoolID, studentID, busID, tripID) => {
   try {
+    Alert.alert("inside register device token");
     // Request notification permissions
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") {
@@ -16,51 +18,44 @@ const registerDeviceToken = async (schoolID, studentID, busID, tripID) => {
     }
 
     // Generate the device token
-    const token = (await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig.extra.eas.projectId,
-    })).data;
+    const token = (
+      await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig.extra.eas.projectId,
+      })
+    ).data;
 
-    if (!token) {
-      throw new Error("Failed to generate device token");
-    }
+    if (!token) throw new Error("Failed to generate device token");
 
     // Retrieve the stored token
     const storedToken = await AsyncStorage.getItem("deviceToken");
 
-    // Check if the token has changed
+    // Update Firebase only if the token has changed
     if (storedToken !== token) {
-      // Save the new token locally
       await AsyncStorage.setItem("deviceToken", token);
 
-      // Update the token in Firebase
-      const db = database;
       const studentRef = dbRef(
-        db,
+        database,
         `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentID}`
       );
 
-      // Check if the student node exists
       const studentSnapshot = await get(studentRef);
+
       if (!studentSnapshot.exists()) {
-        // Use set if the node doesn't exist
+        // Create the node if it doesn't exist
         await set(studentRef, { token });
-        console.log("Student node created with token:", token);
       } else {
-        // Use update to avoid overwriting other properties
+        // Update the existing node without overwriting other properties
         await update(studentRef, { token });
-        console.log("Device token updated in existing student node:", token);
       }
-    } else {
-      console.log('token: ' + token);
-      console.log("Device token unchanged, no update required.");
     }
 
+    // Successfully registered
+    Alert.alert("Device registered successfully");
     return token;
   } catch (error) {
-    console.error("Error registering device token:", error);
+    Alert.alert("Registration Failed", error.message);
     throw error;
   }
 };
-
 
 export default registerDeviceToken;

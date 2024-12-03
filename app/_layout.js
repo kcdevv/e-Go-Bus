@@ -1,5 +1,5 @@
 import { Stack } from "expo-router"
-
+import '../firebase.config'
 const RootLayout = () => {
   return (
     <Stack
