@@ -17,22 +17,22 @@ const Index = () => {
         const busID = await AsyncStorage.getItem("busID");
         const tripID = await AsyncStorage.getItem("tripID");
         const studentID = await AsyncStorage.getItem("studentID");
-        const driverID = await AsyncStorage.getItem("driverID");
+        const driverName = await AsyncStorage.getItem("driverName");
         const isManagement = await AsyncStorage.getItem("isManagement") === "true";
 
-        console.log("SchoolID:", schoolID);
-        console.log("BusID:", busID);
-        console.log("TripID:", tripID);
-        console.log("StudentID:", studentID);
-        console.log("DriverID:", driverID);
-        console.log("IsManagement:", isManagement);
+        // console.log("SchoolID:", schoolID);
+        // console.log("BusID:", busID);
+        // console.log("TripID:", tripID);
+        // console.log("StudentID:", studentID);
+        // console.log("driverName:", driverName);
+        // console.log("IsManagement:", isManagement);
 
         // Wait for the animation to complete (3 seconds)
         setTimeout(async () => {
           if (schoolID && studentID && busID && tripID) {
             await registerDeviceToken(schoolID, studentID, busID, tripID);
             router.replace("dashboards/parent"); // Navigate to Parent Dashboard
-          } else if (schoolID && driverID && busID && tripID) {
+          } else if (schoolID && driverName && busID && tripID) {
             router.replace("dashboards/driver"); // Navigate to Driver Dashboard
           } else if (isManagement) {
             router.replace("dashboards/management"); // Navigate to Management Dashboard

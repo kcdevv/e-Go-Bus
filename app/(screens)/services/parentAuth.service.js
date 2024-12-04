@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { storage, database } from '../../../firebase.config';  // Adjust the path as needed
 import { ref as dbRef, get, update, push, set } from 'firebase/database';  // Import `set` to create data if needed
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -36,6 +37,7 @@ export const validateFields = async (schoolID, busID, studentID, tripID) => {
     if (!tripSnapshot.exists()) return 'Trip ID does not exist';
     if (!studentSnapshot.exists()) return 'Student ID does not exist';
 
+
     return true;
   } catch (error) {
     console.error('Error validating data:', error);
@@ -49,7 +51,6 @@ export const updateProfilePic = async (schoolID, busID, tripID, studentID, profi
   const studentRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentID}`);
   const tripTokensRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/tokens`);
 
-  Alert.alert('inside update profile pic')
   try {
     // Fetch existing student data
     const studentSnapshot = await get(studentRef);
@@ -70,24 +71,26 @@ export const updateProfilePic = async (schoolID, busID, tripID, studentID, profi
     if (deviceToken) {
       await push(tripTokensRef, deviceToken);
     }
-
-    Alert.alert('before fetching additional dets')
     
     // Fetch additional data
     const schoolSnapshot = await get(dbRef(db, `schools/${schoolID}`));
     const busSnapshot = await get(dbRef(db, `schools/${schoolID}/buses/${busID}`));
     const studentSnapshotAfterUpdate = await get(studentRef);
     
-    const schoolName = schoolSnapshot.val()?.name;
-    const driverDetails = busSnapshot.val()?.driver;
+    const schoolName = schoolSnapshot.val()?.schoolName;
+    const driverDetails = busSnapshot.val();
+    const { trips, ...filteredDriverDetails } = driverDetails || {};
     const studentDetails = studentSnapshotAfterUpdate.val();
     
     const responseData = {
       schoolName,
-      driverDetails,
+      filteredDriverDetails,
       studentDetails,
     };
-    
+    console.log('Saving student details:', studentDetails);
+    await AsyncStorage.setItem('driverDetails', JSON.stringify(filteredDriverDetails));
+    await AsyncStorage.setItem('schoolName', JSON.stringify(schoolName.replace(/"/g, "")));
+    await AsyncStorage.setItem('studentDetails', JSON.stringify(studentDetails));
     Alert.alert("Login Successfull", "Welcome to e-GO Bus! we are ready to serve you.");
     return responseData;
   } catch (error) {

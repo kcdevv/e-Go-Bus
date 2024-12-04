@@ -60,7 +60,6 @@ export default function ParentDashboardLayout() {
 
   return (
 
-
     <View style={tw`flex-1 shadow-2xl`}>
       {/* Header with Hamburger Menu */}
       <View style={[tw`flex-row items-center justify-between p-4 pt-10`, { backgroundColor: "#FCD32D" }]}>
@@ -159,9 +158,6 @@ export default function ParentDashboardLayout() {
       )}
 
     </View>
-
-
-
 
   );
 }

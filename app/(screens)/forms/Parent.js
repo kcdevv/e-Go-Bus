@@ -22,42 +22,44 @@ const Parent = () => {
   const navigation = useNavigation();
 
   const handleSubmit = async () => {
-    console.log("handleSubmit called");
-    Alert.alert('entered handle submit')
     try {
-      // Adding logging before validation
-      console.log("Validating fields...");
       const validationResult = await validateFields(schoolID, busID, studentID, tripID);
-      console.log("Validation result:", validationResult);
-      
+
       if (validationResult !== true) {
         Alert.alert("Validation Failed", validationResult);
         return;
       }
-      Alert.alert('after validation')
-      
+
       let profilePicUrl = null;
       if (selectedImage) {
-        Alert.alert('selectedImage', selectedImage)
         try {
           profilePicUrl = await uploadProfileImage(selectedImage, studentID, schoolID);
-          Alert.alert('profilePicUrl', profilePicUrl)
         } catch (error) {
           Alert.alert("Error", "Failed to upload profile image");
           return;
         }
       }
 
-      Alert.alert('before response')
-      
+
       try {
         const deviceToken = await registerDeviceToken(schoolID, studentID, busID, tripID);
-        Alert.alert('after device token: ' + deviceToken)
         const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl, deviceToken);
-        console.log("Profile Data:", response);
-        Alert.alert('after response')
         
-        if(response) {
+        
+        if (response) {
+          await AsyncStorage.setItem('schoolID', JSON.stringify(schoolID));
+          await AsyncStorage.setItem('busID', JSON.stringify(busID));
+          await AsyncStorage.setItem('tripID', JSON.stringify(tripID));
+          await AsyncStorage.setItem('studentID', JSON.stringify(studentID));
+
+          const keys = await AsyncStorage.getAllKeys();
+  console.log('All AsyncStorage keys:', keys);
+
+  for (const key of keys) {
+    const value = await AsyncStorage.getItem(key);
+    console.log(`Key: ${key}, Value: ${value}`);
+  }
+  
           navigation.reset({
             index: 0,
             routes: [{ name: "dashboards/parent" }],

@@ -7,7 +7,6 @@ import { Alert } from "react-native";
 
 const registerDeviceToken = async (schoolID, studentID, busID, tripID) => {
   try {
-    Alert.alert("inside register device token");
     // Request notification permissions
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") {
@@ -49,8 +48,6 @@ const registerDeviceToken = async (schoolID, studentID, busID, tripID) => {
       }
     }
 
-    // Successfully registered
-    Alert.alert("Device registered successfully");
     return token;
   } catch (error) {
     Alert.alert("Registration Failed", error.message);
