@@ -1,15 +1,45 @@
-import { StyleSheet, Image, View, ActivityIndicator, Alert } from "react-native";
-import React, { useState, useEffect } from "react";
+import { StyleSheet, Image, Alert } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
 import MapView from "react-native-maps";
 import { Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { get, ref } from "firebase/database";
 import { database } from "../../../../../firebase.config";
+import Loader from "../../../../components/Loader";
+
+// Memoized Marker component to avoid unnecessary re-renders
+const MemoizedMarker = React.memo(({ location }) => {
+  return (
+    <Marker
+      coordinate={{
+        latitude: location.latitude,
+        longitude: location.longitude,
+      }}
+      title={location.title}
+    >
+      <Image
+        source={require("../../../../assets/icons/bus.png")}
+        style={[
+          styles.busIcon,
+          { transform: [{ rotate: `${location.heading}deg` }] }, // Rotate the bus icon
+        ]}
+      />
+    </Marker>
+  );
+}, (prevProps, nextProps) => {
+  // Only re-render if the location properties change
+  return (
+    prevProps.location.latitude === nextProps.location.latitude &&
+    prevProps.location.longitude === nextProps.location.longitude &&
+    prevProps.location.heading === nextProps.location.heading
+  );
+});
 
 const MapScreen = () => {
   const [schoolID, setSchoolID] = useState(null);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [alertShown, setAlertShown] = useState(false); // Track whether the alert has been shown
 
   // Fetch schoolID from AsyncStorage
   useEffect(() => {
@@ -31,7 +61,7 @@ const MapScreen = () => {
   }, []);
 
   // Function to fetch bus locations from Firebase
-  const fetchBusLocations = async () => {
+  const fetchBusLocations = useCallback(async () => {
     if (!schoolID) return;
 
     try {
@@ -39,8 +69,11 @@ const MapScreen = () => {
       const snapshot = await get(busesRef);
 
       if (!snapshot.exists()) {
-        Alert.alert("No Data", "No buses found for this school.");
-        setLocations([]);
+        if (!alertShown) {
+          Alert.alert("No Data", "No buses found for this school.");
+          setAlertShown(true); // Set the alert as shown
+        }
+        setLocations([]); // Clear the locations
         return;
       }
 
@@ -57,20 +90,31 @@ const MapScreen = () => {
                 title: `Bus ${busId} - Trip ${tripId}`,
                 latitude: tripDetails.location.latitude,
                 longitude: tripDetails.location.longitude,
-                accuracy: tripDetails.location.accuracy,
-                timestamp: tripDetails.location.timestamp,
+                heading: tripDetails.location.heading || 0, // Default heading to 0 if not provided
               });
             }
           });
         }
       });
 
-      setLocations(fetchedLocations);
+      // Only update locations if there's a change in coordinates or heading
+      setLocations((prevLocations) => {
+        const updatedLocations = fetchedLocations.filter((newLocation) => {
+          return !prevLocations.some((prevLocation) =>
+            prevLocation.id === newLocation.id &&
+            prevLocation.latitude === newLocation.latitude &&
+            prevLocation.longitude === newLocation.longitude &&
+            prevLocation.heading === newLocation.heading
+          );
+        });
+
+        return updatedLocations.length > 0 ? fetchedLocations : prevLocations;
+      });
     } catch (error) {
       console.error("Error fetching bus locations:", error);
       Alert.alert("Error", "Failed to fetch bus locations");
     }
-  };
+  }, [schoolID, alertShown]);
 
   // Set up interval to fetch bus locations every 3 seconds
   useEffect(() => {
@@ -82,7 +126,7 @@ const MapScreen = () => {
 
     // Clear interval on component unmount
     return () => clearInterval(intervalId);
-  }, [schoolID]);
+  }, [schoolID, fetchBusLocations]);
 
   // Initial fetch when schoolID changes
   useEffect(() => {
@@ -90,15 +134,11 @@ const MapScreen = () => {
       fetchBusLocations();
       setLoading(false);
     }
-  }, [schoolID]);
+  }, [schoolID, fetchBusLocations]);
 
   // Render loading state
   if (loading) {
-    return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#FCD32D" />
-      </View>
-    );
+    return <Loader />;
   }
 
   return (
@@ -112,19 +152,7 @@ const MapScreen = () => {
       }}
     >
       {locations.map((location) => (
-        <Marker
-          key={location.id}
-          coordinate={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          title={location.title}
-        >
-          <Image
-            source={require("../../../../assets/icons/bus.png")}
-            style={{ width: 40, height: 40 }}
-          />
-        </Marker>
+        <MemoizedMarker key={location.id} location={location} />
       ))}
     </MapView>
   );
@@ -135,10 +163,10 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  loader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  busIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
   },
 });
 

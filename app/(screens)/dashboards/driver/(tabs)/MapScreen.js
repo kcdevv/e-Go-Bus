@@ -8,7 +8,7 @@ import {
   getLocationAsync,
   updateFirebaseData,
 } from "../services/locationService";
-import tw from "tailwind-react-native-classnames";
+import Loader from "../../../../components/Loader";
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -24,30 +24,27 @@ const MapScreen = () => {
   const locationIntervalRef = useRef(null);
 
   // Function to calculate heading
-  // Updated calculateHeading function
   const calculateHeading = useCallback(() => {
     const { x, y } = magnetometerData;
-  
-    // Directly use x and y without normalizing
+
+    // Calculate angle from magnetometer data
     let angle = Math.atan2(y, x) * (180 / Math.PI);
-    angle < 0 ? angle = (angle + 360) : (angle);
-    console.log("Angle:",angle);
+    angle = angle < 0 ? angle + 360 : angle; // Ensure positive angle
+    console.log("Calculated Heading:", angle);
     return angle;
   }, [magnetometerData]);
-  
 
-// Updated rotateMarker function
-const rotateMarker = useCallback((currentHeading) => {
-  Animated.timing(rotationValue, {
-    toValue: currentHeading - 90,
-    duration: 300,
-    useNativeDriver: Platform.OS !== "web",
-    easing: Easing.linear,
-  }).start();
-}, []);
+  // Function to rotate the marker smoothly
+  const rotateMarker = useCallback((currentHeading) => {
+    Animated.timing(rotationValue, {
+      toValue: currentHeading - 90, // Correct the heading for orientation
+      duration: 300,
+      useNativeDriver: Platform.OS !== "web",
+      easing: Easing.linear,
+    }).start();
+  }, []);
 
-
-  // Function to get user location
+  // Function to fetch the user's location
   const fetchUserLocation = useCallback(async () => {
     try {
       const location = await getLocationAsync();
@@ -57,12 +54,7 @@ const rotateMarker = useCallback((currentHeading) => {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
-      setUserLocation(updatedLocation);
-
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(updatedLocation, 500);
-      }
-
+      setUserLocation(updatedLocation); // Update location without animating the map
       return location;
     } catch (error) {
       console.error("Failed to fetch location:", error);
@@ -70,7 +62,7 @@ const rotateMarker = useCallback((currentHeading) => {
     }
   }, []);
 
-  // Function to update data in Firebase
+  // Function to update Firebase with location and heading
   const updateFirebase = useCallback(
     async (location, currentHeading) => {
       if (!busId || !schoolId || !tripNumber) {
@@ -100,7 +92,7 @@ const rotateMarker = useCallback((currentHeading) => {
   const handleUpdates = useCallback(async () => {
     try {
       const location = await fetchUserLocation();
-      let currentHeading = calculateHeading();
+      const currentHeading = calculateHeading();
 
       if (currentHeading === null) {
         console.warn("Invalid heading value. Skipping Firebase update.");
@@ -130,7 +122,7 @@ const rotateMarker = useCallback((currentHeading) => {
           return;
         }
 
-        locationIntervalRef.current = setInterval(handleUpdates, 500);
+        locationIntervalRef.current = setInterval(handleUpdates, 100);
       } catch (error) {
         console.error("Tracking initialization error:", error);
       }
@@ -152,8 +144,7 @@ const rotateMarker = useCallback((currentHeading) => {
     const headingListener = Magnetometer.addListener((data) => {
       setMagnetometerData(data);
     });
-    console.log("MAgnetometer data:",magnetometerData);
-    
+
     return () => headingListener.remove();
   }, [userLocation]);
 
@@ -163,24 +154,25 @@ const rotateMarker = useCallback((currentHeading) => {
     outputRange: ["0deg", "360deg"],
   });
 
+  if (!userLocation) {
+    return <Loader />;
+  }
+
   return (
     <MapView
       ref={mapRef}
       style={styles.map}
-      initialRegion={
-        userLocation || {
-          latitude: 17.385044,
-          longitude: 78.486671,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }
-      }
+      initialRegion={userLocation || {
+        latitude: 17.385044,
+        longitude: 78.486671,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+      }}
       showsUserLocation
-      zoomEnabled 
-      showsCompass 
-      showsScale 
-      pitchEnabled 
-      onRegionChangeComplete={(region) => setUserLocation(region)} // Update location when map moves
+      zoomEnabled
+      showsCompass
+      showsScale
+      pitchEnabled
     >
       {userLocation && (
         <Marker
