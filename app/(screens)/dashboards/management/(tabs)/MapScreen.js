@@ -39,15 +39,16 @@ const MapScreen = () => {
   const [schoolID, setSchoolID] = useState(null);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [alertShown, setAlertShown] = useState(false); // Track whether the alert has been shown
-
+  
   // Fetch schoolID from AsyncStorage
   useEffect(() => {
     const fetchSchoolID = async () => {
       try {
         const storedSchoolID = await AsyncStorage.getItem("schoolID");
-        if (storedSchoolID) {
-          setSchoolID(storedSchoolID);
+        const sanitizedSchoolID = storedSchoolID.replace(/['"]/g, "").trim();
+        // console.log(sanitizedSchoolID)
+        if (sanitizedSchoolID) {
+          setSchoolID(sanitizedSchoolID);
         } else {
           Alert.alert("Error", "School ID not found in storage");
         }
@@ -69,10 +70,6 @@ const MapScreen = () => {
       const snapshot = await get(busesRef);
 
       if (!snapshot.exists()) {
-        if (!alertShown) {
-          Alert.alert("No Data", "No buses found for this school.");
-          setAlertShown(true); // Set the alert as shown
-        }
         setLocations([]); // Clear the locations
         return;
       }
@@ -114,7 +111,7 @@ const MapScreen = () => {
       console.error("Error fetching bus locations:", error);
       Alert.alert("Error", "Failed to fetch bus locations");
     }
-  }, [schoolID, alertShown]);
+  }, [schoolID]);
 
   // Set up interval to fetch bus locations every 3 seconds
   useEffect(() => {

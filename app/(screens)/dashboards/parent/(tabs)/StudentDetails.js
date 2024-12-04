@@ -19,14 +19,6 @@ const StudentDetails = () => {
         const studentDetails = await AsyncStorage.getItem("studentDetails");
         const schoolName = await AsyncStorage.getItem("schoolName");
 
-        // console.log('studentDetails \n');
-        // const keys = await AsyncStorage.getAllKeys();
-        // console.log('All AsyncStorage keys:', keys);
-
-        // for (const key of keys) {
-        //   const value = await AsyncStorage.getItem(key);
-        //   console.log(`Key: ${key}, Value: ${value}`);
-        // }
         if (studentDetails) {
           const parsedStudentDetails = JSON.parse(studentDetails);
           setStudentData({
@@ -74,13 +66,13 @@ const StudentDetails = () => {
   return (
     <ScrollView>
       <View style={tw`flex-1 items-center p-4 bg-white pb-16`}>
-        <LottieView
+        {/* <LottieView
           style={{ width: 270, height: 150 }}
           source={require("../../../../assets/animations/bus.json")}
           autoPlay
           loop
           speed={1}
-        />
+        /> */}
         <Image
           source={
             studentData.profilePic
@@ -103,23 +95,33 @@ const StudentDetails = () => {
           <Text style={tw`text-lg`}>School Name: {studentData.schoolName}</Text>
         </View>
         <View style={tw`w-full p-4 bg-yellow-100 rounded-lg mt-4`}>
-          <Text style={tw`text-lg mb-2`}>
-            Attendance Status:{" "}
-            {attendanceStatus ? "Present" : "Absent"}
-          </Text>
-          <TouchableOpacity
-            style={tw`bg-green-500 w-40 p-3 rounded-lg flex-row items-center justify-center mt-4`}
-            onPress={() => handleAttendanceUpdate(true)}
-          >
-            <Text style={tw`text-white text-lg`}>Mark as Present</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={tw`bg-red-500 w-40 p-3 rounded-lg flex-row items-center justify-center mt-4`}
-            onPress={() => handleAttendanceUpdate(false)}
-          >
-            <Text style={tw`text-white text-lg`}>Mark as Absent</Text>
-          </TouchableOpacity>
+          <Text style={tw`text-lg font-bold text-center mb-2`}>Today</Text>
+          <View style={tw`flex-row justify-evenly`}>
+            <TouchableOpacity
+              onPress={() => handleAttendanceUpdate(true)}
+              style={tw`p-2 bg-green-500 rounded-lg`}
+            >
+              <Text style={tw`text-white text-lg`}>✔️ Present</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleAttendanceUpdate(false)}
+              style={tw`p-2 bg-red-500 rounded-lg`}
+            >
+              <Text style={tw`text-white text-lg`}>✖️ Absent</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <View style={tw`w-full p-4 bg-yellow-100 rounded-lg mt-4`}>
+          <Text style={tw`text-lg font-bold text-center mb-2`}>Current Status:{" "}
+            {attendanceStatus ? (
+              <Text style={tw`text-green-500`}>Present</Text>
+            ) : (
+              <Text style={tw`text-red-500`}>Absent</Text>
+            )}
+          </Text>
+        </View>
+
       </View>
     </ScrollView>
   );

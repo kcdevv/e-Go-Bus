@@ -17,12 +17,11 @@ const Management = () => {
 
   const handleSubmit = async () => {
     try {
-      console.log("School ID:", schoolID);
-      console.log("Password:", password);
+
+      // authenticate the school
 
       // Store schoolID in AsyncStorage
-      await AsyncStorage.setItem("schoolID", schoolID);
-      console.log("School ID saved to AsyncStorage");
+      await AsyncStorage.setItem("schoolID", JSON.stringify(schoolID));
 
       // Navigate to the dashboard
       navigation.reset({

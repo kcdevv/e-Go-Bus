@@ -7,7 +7,7 @@ export const updateAttendanceStatus = async (schoolID, busID, tripID, studentID,
   const studentRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentID}`);
 
   try {
-    await set(studentRef, {
+    await update(studentRef, {
       present: status,
     });
 

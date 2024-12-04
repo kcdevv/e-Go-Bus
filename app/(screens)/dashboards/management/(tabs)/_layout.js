@@ -89,7 +89,7 @@ export default function ManagementDashboardLayout() {
         >
 
           <Tabs.Screen
-            name="DriverDetails"
+            name="SendMessage"
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>
@@ -105,7 +105,7 @@ export default function ManagementDashboardLayout() {
             }}
           />
           <Tabs.Screen
-            name="StudentDetails"
+            name="Details"
             options={{
               headerShown: false,
               tabBarIcon: ({ focused }) =>

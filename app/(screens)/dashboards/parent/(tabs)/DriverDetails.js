@@ -14,8 +14,6 @@ const DriverDetails = () => {
   useEffect(() => {
     const fetchDriverDetails = async () => {
       try {
-        // Reset AsyncStorage to ensure fresh data
-        await AsyncStorage.removeItem("studentDetails");
 
         const driverDetails = await AsyncStorage.getItem("driverDetails");
         if (driverDetails) {
