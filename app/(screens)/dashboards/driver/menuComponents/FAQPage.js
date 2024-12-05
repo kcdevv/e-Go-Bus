@@ -4,6 +4,8 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import tw from 'tailwind-react-native-classnames';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons"; 
+
 
 const FAQPage = () => {
   const [expandedId, setExpandedId] = useState(null);
@@ -45,7 +47,7 @@ const FAQPage = () => {
       {/* Header */}
       <View style={[tw`flex-row items-center p-4`, { height: 60, backgroundColor: '#FCD32D' }]}>
         <TouchableOpacity onPress={() => router.back()} style={tw`mr-4`}>
-          <FontAwesome name="arrow-left" size={24} color="black" />
+        <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text style={tw`text-lg font-bold text-black`}>FAQs</Text>
       </View>

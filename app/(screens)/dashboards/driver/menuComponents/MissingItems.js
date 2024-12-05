@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; // Import Ionicons for the back arrow
+import { Ionicons } from "@expo/vector-icons"; 
 import * as ImagePicker from "expo-image-picker";
 import tw from "tailwind-react-native-classnames";
 import {useRouter} from 'expo-router'
+import { FontAwesome } from "@expo/vector-icons";
 
 const MissingItems = () => {
   const [title, setTitle] = useState("Lost Item Found");
@@ -83,12 +84,12 @@ const MissingItems = () => {
     <View style={tw`flex-1 bg-white`}>
       {/* Header */}
       <View
-        style={[tw`py-4 px-4 flex-row items-center justify-between`, { backgroundColor: "#FCD32D" }]}
+        style={[tw`py-4 px-4 flex-row items-center`, { backgroundColor: "#FCD32D" }]}
       >
         <TouchableOpacity onPress={() => { router.back() }}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={tw`text-xl font-bold text-black`}>Report Missing Item</Text>
+        <Text style={tw`text-xl font-bold text-black ml-2`}>Report Missing Item</Text>
       </View>
 
       {/* Content */}

@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import tw from "tailwind-react-native-classnames";
+import { Ionicons } from "@expo/vector-icons"; 
+
 
 const Notify = () => {
     const router = useRouter();
@@ -32,7 +34,7 @@ const Notify = () => {
             {/* Header */}
             <View style={[tw`flex-row items-center p-4`, { height: 60, backgroundColor: '#FCD32D' }]}>
                 <TouchableOpacity onPress={() => router.back()} style={tw`mr-4`}>
-                    <FontAwesome name="arrow-left" size={24} color="black" />
+                <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text style={tw`text-lg font-bold text-black`}>Notify</Text>
             </View>
