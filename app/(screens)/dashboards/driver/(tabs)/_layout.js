@@ -139,7 +139,13 @@ export default function DriverDashboardLayout() {
               <View style={tw`flex-1 `}>
                 <View style={tw``}>
                   <Text style={tw`text-lg mb-4 ml-10`}>
-                    <Link href="/(screens)/dashboards/management/MenuComponents/FAQPage">FAQs</Link>
+                    <Link href="/(screens)/dashboards/driver/menuComponents/MissingItems">Missing Items</Link>
+                  </Text>
+                  <Text style={tw`text-lg mb-4 ml-10`}>
+                    <Link href="/(screens)/dashboards/driver/menuComponents/Notify">Notify</Link>
+                  </Text>
+                  <Text style={tw`text-lg mb-4 ml-10`}>
+                    <Link href="/(screens)/dashboards/driver/menuComponents/FAQPage">FAQs</Link>
                   </Text>
                 </View>
                 <View style={tw`flex justify-center items-center absolute bottom-5 left-12 `}>

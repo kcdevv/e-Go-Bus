@@ -24,7 +24,8 @@
       },
       "entitlements": {
         "aps-environment": "production"
-      }
+      },
+      "bundleIdentifier": "com.kcjod.eGoBus"
     },
     "android": {
       "permissions": [
