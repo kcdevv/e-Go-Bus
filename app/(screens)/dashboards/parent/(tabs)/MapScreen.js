@@ -1,95 +1,50 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Image, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, View, Text, Animated } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import tw from 'tailwind-react-native-classnames';
-import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { database } from '../../../../../firebase.config'; // Adjust the import path
-import { ref, onValue } from 'firebase/database';
 import Loader from '../../../../components/Loader'; // Assuming you have a Loader component
+import requestLocationPermission from '../services/locationService';
+import fetchAsyncStorageData from '../services/asyncStorageService';
+import fetchBusLocation from '../services/firebaseService';
 
 const MapScreen = () => {
   const [busLocation, setBusLocation] = useState(null);
-  const [busHeading, setBusHeading] = useState(0); // Store heading
+  const [busHeading, setBusHeading] = useState(0);
   const [busID, setBusID] = useState(null);
   const [schoolID, setSchoolID] = useState(null);
   const [tripID, setTripID] = useState(null);
-  const [loading, setLoading] = useState(true); // Loading state
+  const [loading, setLoading] = useState(true);
+  const rotateAnim = useRef(new Animated.Value(0)).current; // Animation reference for smooth rotation
 
-  // Fetch data from AsyncStorage
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const storedBusID = await AsyncStorage.getItem('busID');
-        const storedSchoolID = await AsyncStorage.getItem('schoolID');
-        const storedTripID = await AsyncStorage.getItem('tripID');
-  
-        // Sanitize retrieved values by trimming and removing quotes
-        if (storedBusID && storedSchoolID && storedTripID) {
-          setBusID(storedBusID.replace(/"/g, '').trim());
-          setSchoolID(storedSchoolID.replace(/"/g, '').trim());
-          setTripID(storedTripID.replace(/"/g, '').trim());
-        } else {
-          alert('Missing required data in AsyncStorage.');
-        }
-      } catch (error) {
-        console.error('Error fetching data from AsyncStorage', error);
-      }
+      await fetchAsyncStorageData(setBusID, setSchoolID, setTripID);
     };
-  
     fetchData();
   }, []);
-  
 
-  // Request location permissions
   useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permission to access location was denied');
-      }
-    })();
+    requestLocationPermission();
   }, []);
 
-  // Fetch location and heading from Firebase
   useEffect(() => {
     if (busID && schoolID && tripID) {
-      console.log("School ID:", schoolID);
-      console.log("Bus ID:", busID);
-      console.log("Trip ID:", tripID);
-
-      // Correct Firebase path with trip ID
-      const locationRef = ref(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/location`);
-      console.log(`schools/${schoolID}/buses/${busID}/trips/${tripID}/location`);
-      
-      const unsubscribe = onValue(locationRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          console.log("Fetched data:", data);
-
-          if (data.latitude && data.longitude) {
-            setBusLocation({
-              latitude: data.latitude,
-              longitude: data.longitude,
-            });
-            setBusHeading(data.heading || 0); // Use heading or default to 0
-          } else {
-            console.warn("Missing latitude or longitude in Firebase data");
-          }
-        } else {
-          console.warn("No data available at this Firebase path");
-        }
-        setLoading(false); // Stop loading once data is fetched
-      });
-
-      return () => unsubscribe(); // Unsubscribe listener on cleanup
+      const unsubscribe = fetchBusLocation(busID, schoolID, tripID, setBusLocation, setBusHeading, setLoading);
+      return unsubscribe; // Cleanup on unmount
     }
   }, [busID, schoolID, tripID]);
 
-  if (loading) {
-    return (
-      <Loader />
-    );
+  useEffect(() => {
+    // Smoothly animate rotation when bus heading changes
+    Animated.timing(rotateAnim, {
+      toValue: busHeading,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [busHeading]);
+
+  if (loading || !busLocation) {
+    return <Loader />;
   }
 
   return (
@@ -97,25 +52,31 @@ const MapScreen = () => {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: 17.385044,
-          longitude: 78.486671,
+          latitude: busLocation.latitude,
+          longitude: busLocation.longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
+        showsUserLocation
+        rotateEnabled // Enable map rotation
       >
         {busLocation && (
-          <Marker
-            coordinate={busLocation}
-            title="Bus Location"
-            anchor={{ x: 0.5, y: 0.5 }}
-          >
-            <Image
+          <Marker coordinate={busLocation} anchor={{ x: 0.5, y: 0.5 }} title="Bus Location">
+            <Animated.Image
               source={require('../../../../assets/icons/bus.png')}
-              style={{
-                width: 50,
-                height: 50,
-                transform: [{ rotate: `${busHeading}deg` }], // Rotate based on heading
-              }}
+              style={[
+                styles.markerImage,
+                {
+                  transform: [
+                    {
+                      rotate: rotateAnim.interpolate({
+                        inputRange: [0, 360],
+                        outputRange: ['0deg', '360deg'], // Ensure smooth rotation
+                      }),
+                    },
+                  ],
+                },
+              ]}
             />
           </Marker>
         )}
@@ -138,14 +99,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#555',
+  markerImage: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
   },
 });
