@@ -1,14 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { StyleSheet, Alert, Animated, Easing, Platform } from "react-native";
+import { StyleSheet, Alert, Animated } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Magnetometer } from "expo-sensors";
 import { database } from "../../../../../firebase.config";
-import {
-  loadStoredData,
-  getLocationAsync,
-  updateFirebaseData,
-} from "../services/locationService";
+import { loadStoredData, getLocationAsync } from "../services/locationService";
 import Loader from "../../../../components/Loader";
+import { calculateHeading, rotateMarker, updateFirebase } from "../utils/locationUtils";
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -23,28 +20,7 @@ const MapScreen = () => {
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
 
-  // Function to calculate heading
-  const calculateHeading = useCallback(() => {
-    const { x, y } = magnetometerData;
-
-    // Calculate angle from magnetometer data
-    let angle = Math.atan2(y, x) * (180 / Math.PI);
-    angle = angle < 0 ? angle + 360 : angle; // Ensure positive angle
-    console.log("Calculated Heading:", angle);
-    return angle;
-  }, [magnetometerData]);
-
-  // Function to rotate the marker smoothly
-  const rotateMarker = useCallback((currentHeading) => {
-    Animated.timing(rotationValue, {
-      toValue: currentHeading - 90, // Correct the heading for orientation
-      duration: 300,
-      useNativeDriver: Platform.OS !== "web",
-      easing: Easing.linear,
-    }).start();
-  }, []);
-
-  // Function to fetch the user's location
+  // Fetch the user's location
   const fetchUserLocation = useCallback(async () => {
     try {
       const location = await getLocationAsync();
@@ -62,37 +38,17 @@ const MapScreen = () => {
     }
   }, []);
 
-  // Function to update Firebase with location and heading
-  const updateFirebase = useCallback(
-    async (location, currentHeading) => {
-      if (!busId || !schoolId || !tripNumber) {
-        console.warn("Missing trip details for Firebase update");
-        return;
-      }
-
-      try {
-        await updateFirebaseData(database, {
-          busId,
-          schoolId,
-          driverId,
-          tripNumber,
-          location,
-          heading: currentHeading,
-        });
-        console.log("Firebase updated successfully");
-      } catch (error) {
-        console.error("Failed to update Firebase:", error);
-        throw error;
-      }
-    },
-    [busId, schoolId, tripNumber, driverId]
-  );
-
   // Master function to handle all updates
   const handleUpdates = useCallback(async () => {
     try {
       const location = await fetchUserLocation();
-      const currentHeading = calculateHeading();
+
+      if (!magnetometerData || magnetometerData.x === undefined || magnetometerData.y === undefined) {
+        console.warn("Magnetometer data not yet available");
+        return;
+      }
+
+      const currentHeading = calculateHeading(magnetometerData);
 
       if (currentHeading === null) {
         console.warn("Invalid heading value. Skipping Firebase update.");
@@ -100,12 +56,12 @@ const MapScreen = () => {
       }
 
       setHeading(currentHeading);
-      rotateMarker(currentHeading);
-      await updateFirebase(location, currentHeading);
+      rotateMarker(rotationValue, currentHeading);
+      await updateFirebase(database, busId, schoolId, driverId, tripNumber, location, currentHeading);
     } catch (error) {
       Alert.alert("Update Error", error.message);
     }
-  }, [fetchUserLocation, calculateHeading, rotateMarker, updateFirebase]);
+  }, [fetchUserLocation, magnetometerData, busId, schoolId, driverId, tripNumber]);
 
   // Initialize trip data and set up location tracking
   useEffect(() => {
@@ -140,7 +96,7 @@ const MapScreen = () => {
 
   // Magnetometer heading listener
   useEffect(() => {
-    Magnetometer.setUpdateInterval(100);
+    Magnetometer.setUpdateInterval(300);
     const headingListener = Magnetometer.addListener((data) => {
       setMagnetometerData(data);
     });

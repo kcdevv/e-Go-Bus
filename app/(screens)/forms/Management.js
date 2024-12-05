@@ -21,7 +21,7 @@ const Management = () => {
       // authenticate the school
 
       // Store schoolID in AsyncStorage
-      await AsyncStorage.setItem("schoolID", JSON.stringify(schoolID));
+      await AsyncStorage.setItem("schoolID", schoolID);
 
       // Navigate to the dashboard
       navigation.reset({

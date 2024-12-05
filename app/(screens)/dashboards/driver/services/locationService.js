@@ -66,9 +66,9 @@ export const updateFirebaseData = async (database, data) => {
     );
 
     const locationData = {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      accuracy: location.coords.accuracy,
+      latitude: location?.coords?.latitude,
+      longitude: location?.coords?.longitude,
+      accuracy: location?.coords?.accuracy,
       heading: heading || 0,
       timestamp: Date.now(),
     };

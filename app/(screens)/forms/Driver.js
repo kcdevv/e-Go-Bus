@@ -21,7 +21,7 @@ const Driver = () => {
     try {
       // Store form data in AsyncStorage
       await AsyncStorage.setItem('schoolID', schoolID);
-      await AsyncStorage.setItem('busID', busID ? busID : ''); // Handle optional busID
+      await AsyncStorage.setItem('busID', busID); // Handle optional busID
       await AsyncStorage.setItem('driverID', driverID);
       await AsyncStorage.setItem('tripID', tripNumber);
   
