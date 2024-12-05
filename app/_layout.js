@@ -1,6 +1,8 @@
 import { Stack } from "expo-router"
 import '../firebase.config'
+// import { SafeAreaView } from "react-native-safe-area-context"
 const RootLayout = () => {
+  
   return (
     <Stack
       screenOptions={{
