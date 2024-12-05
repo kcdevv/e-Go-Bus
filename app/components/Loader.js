@@ -1,10 +1,11 @@
 import React from "react";
-import { StyleSheet, View, ActivityIndicator } from "react-native";
+import { StyleSheet, View, ActivityIndicator, Text } from "react-native";
 
-const Loader = ({ size = "large", color = "#FCD32D" }) => {
+const Loader = ({ size = "large", color = "#FCD32D", text = "Loading.." }) => {
   return (
     <View style={styles.loader}>
       <ActivityIndicator size={size} color={color} />
+      <Text>{text}</Text>
     </View>
   );
 };
