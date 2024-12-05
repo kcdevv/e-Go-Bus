@@ -1,41 +1,75 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import tw from 'tailwind-react-native-classnames';
 
-const AlertScreen = () => {
-  return (
-    <View style={tw`flex-1 w-full h-full bg-white items-center justify-evenly py-5 px-4`}>
-      
-      {/* Alert Text */}
-      <Text style={tw`text-xl font-bold text-center text-black`}>
-        Sending alert to Management
-      </Text>
+const SosScreen = () => {
+  const [countdown, setCountdown] = useState(5); // 5-second countdown
+  const [alertActive, setAlertActive] = useState(false);
 
+  // Start countdown when SOS is triggered
+  useEffect(() => {
+    if (alertActive && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer); // Clear timer on component unmount
+    } else if (alertActive && countdown === 0) {
+      // Trigger SOS action here
+      sendAlertToManagement();
+    }
+  }, [alertActive, countdown]);
+
+  const sendAlertToManagement = () => {
+    Alert.alert(
+      'SOS Sent!',
+      'The alert has been sent to management.',
+      [{ text: 'OK', style: 'default' }]
+    );
+    resetSos();
+  };
+
+  const resetSos = () => {
+    setAlertActive(false);
+    setCountdown(5);
+  };
+
+  return (
+    <View style={tw`flex-1 bg-red-600 items-center justify-center`}>
       {/* SOS Icon */}
-      <View style={tw`my-5`}>
+      <View style={tw`mb-8`}>
         <Image
           source={require("../../../../assets/images/sos-icon-removebg-preview.png")}
-          style={tw`w-32 h-32`}
+          style={tw`w-40 h-40`}
         />
       </View>
 
-      {/* Buttons */}
-      <View style={tw`flex-row justify-around w-full px-4`}>
+      {/* Countdown or Action Message */}
+      {alertActive ? (
+        <Text style={tw`text-white text-3xl mb-2 font-bold`}>
+          Alert in {countdown}...
+        </Text>
+      ) : (
+        <Text style={tw`text-white text-lg text-center font-semibold`}>
+          Press SOS to send an emergency alert
+        </Text>
+      )}
+
+      {/* SOS Button */}
+      {!alertActive ? (
         <TouchableOpacity
-          style={tw`bg-yellow-200 py-3 px-5 rounded-lg shadow-md`}
-          accessibilityLabel="Cancel Alert"
+          onPress={() => setAlertActive(true)}
+          style={tw`bg-white py-5 px-10 rounded-full shadow-lg my-5`}
         >
-          <Text style={tw`text-black font-semibold capitalize`}>Cancel</Text>
+          <Text style={tw`text-red-600 text-2xl font-bold`}>SOS</Text>
         </TouchableOpacity>
+      ) : (
         <TouchableOpacity
-          style={tw`bg-yellow-400 py-3 px-5 rounded-lg shadow-md`}
-          accessibilityLabel="Confirm Alert"
+          onPress={resetSos}
+          style={tw`bg-white py-3 px-6 rounded-lg shadow-md`}
         >
-          <Text style={tw`text-black font-semibold capitalize`}>Ok</Text>
+          <Text style={tw`text-red-600 text-lg font-semibold`}>Cancel</Text>
         </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 };
 
-export default AlertScreen;
+export default SosScreen;
