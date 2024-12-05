@@ -18,7 +18,7 @@ const MemoizedMarker = React.memo(({ location }) => {
       title={location.title}
     >
       <Image
-        source={require("../../../../assets/icons/bus.png")}
+        source={require("../../../../assets/images/bus.png")}
         style={[
           styles.busIcon,
           { transform: [{ rotate: `${location.heading}deg` }] }, // Rotate the bus icon
