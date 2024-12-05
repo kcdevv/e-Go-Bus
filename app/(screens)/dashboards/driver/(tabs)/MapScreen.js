@@ -60,31 +60,38 @@ const MapScreen = () => {
 
   // Master function to handle all updates
   const handleUpdates = useCallback(async () => {
+    if (!tripEnabled) {
+      return; // Prevent updates if the trip is not enabled
+    }
+  
     try {
       const location = await fetchUserLocation();
-
+  
       if (!magnetometerData || magnetometerData.x === undefined || magnetometerData.y === undefined) {
         console.warn("Magnetometer data not yet available");
         return;
       }
-
+  
       const currentHeading = calculateHeading(magnetometerData);
-
+  
       if (currentHeading === null) {
         console.warn("Invalid heading value. Skipping Firebase update.");
         return;
       }
-
+  
       setHeading(currentHeading);
       rotateMarker(rotationValue, currentHeading);
       await updateFirebase(database, busId, schoolId, driverId, tripNumber, location, currentHeading);
     } catch (error) {
       Alert.alert("Update Error", error.message);
     }
-  }, [fetchUserLocation, magnetometerData, busId, schoolId, driverId, tripNumber]);
+  }, [fetchUserLocation, magnetometerData, busId, schoolId, driverId, tripNumber, tripEnabled]);
+  
 
   // Initialize trip data and set up location tracking
   useEffect(() => {
+    let locationInterval;
+  
     const initializeTracking = async () => {
       try {
         const storedData = await loadStoredData();
@@ -97,22 +104,27 @@ const MapScreen = () => {
           Alert.alert("Error", "Unable to load trip information");
           return;
         }
-
-        locationIntervalRef.current = setInterval(handleUpdates, 1000);
+  
+        if (tripEnabled) {
+          locationInterval = setInterval(handleUpdates, 1000);
+          locationIntervalRef.current = locationInterval;
+        }
       } catch (error) {
         console.error("Tracking initialization error:", error);
       }
     };
-
+  
     initializeTracking();
-
+  
     return () => {
       if (locationIntervalRef.current) {
         clearInterval(locationIntervalRef.current);
+        locationIntervalRef.current = null;
       }
       Magnetometer.removeAllListeners();
     };
-  }, [handleUpdates]);
+  }, [handleUpdates, tripEnabled]);
+  
 
   // Magnetometer heading listener
   useEffect(() => {
