@@ -35,14 +35,14 @@ export const updateFirebase = async (database, busId, schoolId, driverId, tripNu
   }
 
   try {
-    // await updateFirebaseData(database, {
-    //   busId,
-    //   schoolId,
-    //   driverId,
-    //   tripNumber,
-    //   location,
-    //   heading: currentHeading,
-    // });
+    await updateFirebaseData(database, {
+      busId,
+      schoolId,
+      driverId,
+      tripNumber,
+      location,
+      heading: currentHeading,
+    });
     console.log("Firebase updated successfully");
   } catch (error) {
     console.error("Failed to update Firebase:", error);
