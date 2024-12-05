@@ -78,7 +78,7 @@ const MapScreen = () => {
           return;
         }
 
-        locationIntervalRef.current = setInterval(handleUpdates, 100);
+        locationIntervalRef.current = setInterval(handleUpdates, 1000);
       } catch (error) {
         console.error("Tracking initialization error:", error);
       }
@@ -96,7 +96,7 @@ const MapScreen = () => {
 
   // Magnetometer heading listener
   useEffect(() => {
-    Magnetometer.setUpdateInterval(300);
+    Magnetometer.setUpdateInterval(1000);
     const headingListener = Magnetometer.addListener((data) => {
       setMagnetometerData(data);
     });
