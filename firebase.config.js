@@ -3,7 +3,7 @@ import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 import Constants from 'expo-constants';
 
-console.log(Constants.expoConfig.extra.FIREBASE_PROJECT_ID);
+console.log(Constants.expoConfig.extra.FIREBASE_API_KEY);
 console.log(Constants.expoConfig.extra.FIREBASE_DATABASE_URL);
 
 

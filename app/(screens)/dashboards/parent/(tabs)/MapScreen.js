@@ -1,55 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Image } from 'react-native';
+
+
 import MapView, { Marker, Polyline } from 'react-native-maps';
+
 import tw from 'tailwind-react-native-classnames';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ref, onValue } from 'firebase/database';
-import { database } from '../../../../../firebase.config'; // Correct path
-import axios from 'axios'; // Import axios
+import { database } from '../../../../../firebase.config';
+import axios from 'axios';
 import Loader from '../../../../components/Loader';
+import Constants from 'expo-constants';
+import _ from 'lodash';
 
 const MapScreen = () => {
   const [busLocation, setBusLocation] = useState(null);
   const [busHeading, setBusHeading] = useState(0);
+  const [busSpeed, setBusSpeed] = useState(0); // Calculated speed
   const [busID, setBusID] = useState(null);
   const [schoolID, setSchoolID] = useState(null);
   const [tripID, setTripID] = useState(null);
   const [loading, setLoading] = useState(true);
   const [eta, setEta] = useState(null);
-  const [route, setRoute] = useState(null); // Store route information
-  const [prevLocation, setPrevLocation] = useState(null); // Store previous location
-  const [busSpeed, setBusSpeed] = useState(0); // Store the calculated speed
+  const [route, setRoute] = useState(null);
+  const [prevLocation, setPrevLocation] = useState(null);
+  const [prevTimestamp, setPrevTimestamp] = useState(null); // For time difference calculation
 
-  // Static location of TKR College
+  const mapRef = useRef(null);
+
   const tkrCollegeLocation = {
-    latitude: 17.324011659596977,  // Replace with TKR College's actual latitude
+    latitude: 17.324011659596977,
     longitude: 78.53910916463558,
   };
 
-  // Google Maps Directions API key (replace with your own API key)
-  const googleMapsApiKey = 'AIzaSyBjtpKDllff6rIJhy3TW8mt84Ix2RE9Y-4';
+  const googleMapsApiKey = Constants.expoConfig.android.config.googleMaps.apiKey;
 
-  // Haversine formula to calculate distance between two points
-  const haversineDistance = (lat1, lon1, lat2, lon2) => {
-    const toRad = (deg) => deg * (Math.PI / 180);
-    const R = 6371; // Earth's radius in km
-
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
-
-    return distance;
-  };
-
-  // Fetch data from AsyncStorage
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -72,7 +58,6 @@ const MapScreen = () => {
     fetchData();
   }, []);
 
-  // Request location permissions
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -82,72 +67,51 @@ const MapScreen = () => {
     })();
   }, []);
 
-  // Fetch location and heading from Firebase
-  useEffect(() => {
-    if (busID && schoolID && tripID) {
-      const locationRef = ref(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/location`);
+  const haversineDistance = (lat1, lon1, lat2, lon2) => {
+    const toRad = (deg) => deg * (Math.PI / 180);
+    const R = 6371; // Earth's radius in km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
 
-      const unsubscribe = onValue(locationRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
-          if (data.latitude && data.longitude) {
-            const busLat = data.latitude;
-            const busLon = data.longitude;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); // Distance in km
+  };
 
-            setBusLocation({
-              latitude: busLat,
-              longitude: busLon,
-            });
-            setBusHeading(data.heading || 0); // Use heading or default to 0
+  const calculateSpeed = (newLocation, newTimestamp) => {
+    if (prevLocation && prevTimestamp) {
+      const distance = haversineDistance(
+        prevLocation.latitude,
+        prevLocation.longitude,
+        newLocation.latitude,
+        newLocation.longitude
+      ); // Distance in km
 
-            if (prevLocation) {
-              const distance = haversineDistance(busLat, busLon, prevLocation.latitude, prevLocation.longitude);
-              const timeElapsed = (Date.now() - prevLocation.timestamp) / 1000 / 60 / 60; // Time in hours
-              const speed = distance / timeElapsed; // Speed in km/h
-              setBusSpeed(speed.toFixed(2)); // Update bus speed
-            }
-
-            // Update previous location with current one
-            setPrevLocation({
-              latitude: busLat,
-              longitude: busLon,
-              timestamp: Date.now(),
-            });
-
-            // Calculate ETA
-            const distanceToDestination = haversineDistance(busLat, busLon, tkrCollegeLocation.latitude, tkrCollegeLocation.longitude);
-            const time = (distanceToDestination / busSpeed) * 60; // Time in minutes
-            setEta(Math.round(time)); // Set ETA in minutes
-
-            // Fetch the route from Google Maps Directions API
-            fetchRoute(busLat, busLon, tkrCollegeLocation.latitude, tkrCollegeLocation.longitude);
-          } else {
-            console.warn("Missing latitude or longitude in Firebase data");
-          }
-        } else {
-          console.warn("No data available at this Firebase path");
-        }
-        setLoading(false);
-      });
-
-      return () => unsubscribe(); // Unsubscribe listener on cleanup
+      const timeElapsed = (newTimestamp - prevTimestamp) / 3600; // Time in hours
+      const speed = timeElapsed > 0 ? (distance / timeElapsed) : 0; // Speed in km/h
+      setBusSpeed(Math.round(speed)); // Update state with rounded speed
     }
-  }, [busID, schoolID, tripID, prevLocation, busSpeed]);
+    setPrevLocation(newLocation); // Update previous location
+    setPrevTimestamp(newTimestamp); // Update previous timestamp
+  };
 
-  // Fetch the route from Google Maps Directions API
   const fetchRoute = async (startLat, startLon, endLat, endLon) => {
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${startLat},${startLon}&destination=${endLat},${endLon}&key=${googleMapsApiKey}&mode=driving`;
+    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${startLat},${startLon}&destination=${endLat},${endLon}&key=${googleMapsApiKey}&mode=driving&departure_time=now&traffic_model=best_guess`;
 
     try {
       const response = await axios.get(url);
       if (response.data.routes.length > 0) {
         const polyline = response.data.routes[0].overview_polyline.points;
-        const decodedRoute = decodePolyline(polyline); // Decode the polyline to get accurate route coordinates
-        setRoute(decodedRoute); // Set the decoded route as an array of coordinates
+        setRoute(decodePolyline(polyline));
+
+        const duration = response.data.routes[0].legs[0].duration;
+        setEta(Math.round(duration.value / 60)); // Convert seconds to minutes
       }
     } catch (error) {
-      console.error("Error fetching route:", error);
+      console.error('Error fetching route:', error);
     }
   };
 
@@ -167,7 +131,7 @@ const MapScreen = () => {
         shift += 5;
       } while (byte >= 0x20);
 
-      let deltaLat = ((result & 1) ? ~(result >> 1) : result >> 1);
+      let deltaLat = (result & 1) ? ~(result >> 1) : result >> 1;
       lat += deltaLat;
 
       result = 0;
@@ -178,16 +142,38 @@ const MapScreen = () => {
         shift += 5;
       } while (byte >= 0x20);
 
-      let deltaLng = ((result & 1) ? ~(result >> 1) : result >> 1);
+      let deltaLng = (result & 1) ? ~(result >> 1) : result >> 1;
       lng += deltaLng;
 
-      polyline.push({
-        latitude: lat / 1e5,
-        longitude: lng / 1e5,
-      });
+      polyline.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
     }
     return polyline;
   };
+
+  useEffect(() => {
+    if (busID && schoolID && tripID) {
+      const locationRef = ref(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/location`);
+
+      const unsubscribe = onValue(locationRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          if (data.latitude && data.longitude) {
+            const busCoords = { latitude: data.latitude, longitude: data.longitude };
+            setBusLocation(busCoords);
+            setBusHeading(data.heading || 0);
+
+            const timestamp = Date.now() / 1000; // Timestamp in seconds
+            calculateSpeed(busCoords, timestamp);
+
+            fetchRoute(busCoords.latitude, busCoords.longitude, tkrCollegeLocation.latitude, tkrCollegeLocation.longitude);
+          }
+        }
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [busID, schoolID, tripID]);
 
   if (loading) {
     return <Loader />;
@@ -196,6 +182,7 @@ const MapScreen = () => {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialRegion={{
           latitude: 17.385044,
@@ -216,25 +203,22 @@ const MapScreen = () => {
             />
           </Marker>
         )}
-  
-        {/* Marker for TKR College */}
+
         <Marker coordinate={tkrCollegeLocation} title="TKR College" />
-  
-        {/* Render the route using Polyline if available */}
+
         {route && (
-          <Polyline
-            coordinates={route} 
-            strokeColor="#2A73E8" 
-            strokeWidth={5}       
-          />
+          <Polyline coordinates={route} strokeColor="#2A73E8" strokeWidth={5} />
         )}
       </MapView>
-  
+
       <View style={tw`h-8 w-24 bg-green-500 rounded-lg absolute top-5 left-5 flex items-center justify-center`}>
         <Text style={tw`font-bold text-lg text-white`}>
-          {eta !== null  && eta !== Infinity ? `🕒 ${eta} Min` : '🕒 Load...'}
+          {eta !== null && eta !== Infinity ? `🕒 ${eta} Min` : '🕒 Load...'}
         </Text>
-        
+      </View>
+
+      <View style={tw`h-8 w-32 bg-blue-500 rounded-lg absolute bottom-5 right-5 flex items-center justify-center`}>
+        <Text style={tw`font-bold text-lg text-white`}>{`🚗 ${busSpeed} km/h`}</Text>
       </View>
     </View>
   );
@@ -250,4 +234,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MapScreen;
+export default MapScreen; 
