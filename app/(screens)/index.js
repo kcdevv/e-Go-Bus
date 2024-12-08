@@ -18,7 +18,7 @@ const Index = () => {
         const tripID = await AsyncStorage.getItem("tripID");
         const studentID = await AsyncStorage.getItem("studentID");
         const driverName = await AsyncStorage.getItem("driverName");
-        const isManagement = await AsyncStorage.getItem("isManagement") === "true";
+        const isManagement = await AsyncStorage.getItem("isManagement") === true;
 
         // console.log("SchoolID:", schoolID);
         // console.log("BusID:", busID);

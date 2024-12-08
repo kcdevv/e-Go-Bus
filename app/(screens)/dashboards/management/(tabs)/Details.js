@@ -4,25 +4,26 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
+  Modal,
   Image,
   Alert,
-  Modal,
   TouchableWithoutFeedback,
   Keyboard,
+  ScrollView,
 } from "react-native";
+import tw from "tailwind-react-native-classnames";
 import { fetchSchoolBuses } from "../services/fetchdata";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import tw from "tailwind-react-native-classnames";
 
 const StudentDetails = () => {
   const [buses, setBuses] = useState([]);
   const [expandedBuses, setExpandedBuses] = useState({});
   const [expandedTrips, setExpandedTrips] = useState({});
   const [searchText, setSearchText] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [searchResults, setSearchResults] = useState([]); // To store search results
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const loadSchoolData = async () => {
@@ -31,16 +32,32 @@ const StudentDetails = () => {
         try {
           const busesData = await fetchSchoolBuses(schoolID);
           if (busesData) {
-            setBuses(Object.entries(busesData)); // Convert to an array of key-value pairs
+            setBuses(Object.entries(busesData)); // Convert to array of key-value pairs
           }
         } catch (error) {
           console.error("Error loading school data:", error);
         }
       }
     };
-
     loadSchoolData();
   }, []);
+
+  const handleSearch = () => {
+    const results = [];
+    buses.forEach(([busID, busData]) => {
+      Object.entries(busData.trips || {}).forEach(([tripID, trip]) => {
+        Object.entries(trip.students || {}).forEach(([studentID, student]) => {
+          if (student.studentName.toLowerCase().includes(searchText.toLowerCase())) {
+            results.push({ student, busID, tripID });
+          }
+        });
+      });
+    });
+    setSearchResults(results);
+    if (results.length === 0 && searchText.trim()) {
+      Alert.alert("Student not found");
+    }
+  };
 
   const toggleBus = (busID) => {
     setExpandedBuses((prev) => ({
@@ -57,24 +74,6 @@ const StudentDetails = () => {
     }));
   };
 
-  const handleSearch = () => {
-    const results = [];
-    buses.forEach(([busID, busData]) => {
-      Object.entries(busData.trips || {}).forEach(([tripID, trip]) => {
-        Object.entries(trip.students || {}).forEach(([studentID, student]) => {
-          const regex = new RegExp(searchText, "i");
-          if (regex.test(student.studentName)) {
-            results.push({ student, busID, tripID });
-          }
-        });
-      });
-    });
-    setSearchResults(results); // Store search results
-    if (results.length === 0) {
-      Alert.alert("Student not found");
-    }
-  };
-
   const closeModal = () => {
     setModalVisible(false);
     setSelectedStudent(null);
@@ -82,50 +81,55 @@ const StudentDetails = () => {
 
   return (
     <View style={tw`flex-1 p-4`}>
-      {/* Global ScrollView */}
+      {/* Search Bar */}
+      <TextInput
+        style={tw`border border-gray-400 rounded-lg p-3 mb-4`}
+        placeholder="Search for a student..."
+        value={searchText}
+        onChangeText={(text) => {
+          setSearchText(text);
+          handleSearch();
+        }}
+      />
 
-      <ScrollView style={tw`flex-1`}>
-        {/* Search Bar */}
-        <TextInput
-          style={tw`border border-gray-400 rounded-lg p-3 mb-4`}
-          placeholder="Search for a student..."
-          value={searchText}
-          onChangeText={(text) => {
-            setSearchText(text);
-            handleSearch(); // Trigger search on text change
-          }}
-        />
+      {/* Conditional Rendering for Search Results */}
+      {searchResults.length > 0 && searchText.trim() ? (
+        <View style={tw`h-60`}>
+          <Text style={tw`text-2xl font-bold mb-2`}>Search Results</Text>
+          <FlatList
+            data={searchResults}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={tw`mb-3 p-3 bg-gray-100 rounded-lg`}
+                onPress={() => {
+                  setSelectedStudent(item);
+                  setModalVisible(true);
+                }}
+              >
+                <Text style={tw`text-lg font-semibold`}>{item.student.studentName}</Text>
+                <Text>{item.student.standard}</Text>
+                <Text>
+                  Bus ID: {item.busID} - Trip ID: {item.tripID}
+                </Text>
+              </TouchableOpacity>
+            )}
+            style={tw`flex-1`}
+            contentContainerStyle={tw`pb-4`}
+          />
+        </View>
+      ) : (
+        <Text style={tw`text-lg mb-4`}>
+          {searchText.trim() ? "No results found. Try a different query." : ""}
+        </Text>
+      )}
 
-        {/* Search Results - Dynamic Display */}
-        {searchResults.length > 0 && (
-          <View style={tw`mb-4`}>
-            <Text style={tw`text-2xl font-bold mb-4`}>Search Results</Text>
-            <ScrollView
-              style={tw`h-40`} // Fixed height for search results
-              contentContainerStyle={{ flexGrow: 1 }}
-            >
-              {searchResults.map((result, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={tw`mb-3 p-3 bg-gray-100 rounded-lg`}
-                  onPress={() => {
-                    setSelectedStudent(result);
-                    setModalVisible(true);
-                  }}
-                >
-                  <Text style={tw`text-lg font-semibold`}>{result.student.studentName}</Text>
-                  <Text>{result.student.standard}</Text>
-                  <Text>Bus ID: {result.busID} - Trip ID: {result.tripID}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Nested Dropdown List */}
-        <Text style={tw`text-2xl font-bold mb-4`}>Bus Details</Text>
-        {buses.map(([busID, busData]) => (
-          <View key={busID} style={tw`p-4 bg-yellow-100 rounded-lg mb-4 shadow-md`}>
+      {/* Bus List */}
+      <FlatList
+        data={buses}
+        keyExtractor={([busID]) => busID}
+        renderItem={({ item: [busID, busData] }) => (
+          <View style={tw`p-4 bg-yellow-100 rounded-lg mb-4 shadow-md`}>
             {/* Bus Level */}
             <TouchableOpacity onPress={() => toggleBus(busID)}>
               <Text style={tw`text-lg font-bold text-black mb-2`}>
@@ -147,12 +151,9 @@ const StudentDetails = () => {
                     {expandedTrips[`${busID}-${tripID}`] && (
                       <View style={tw`pl-4`}>
                         {Object.entries(tripData.students || {}).map(([studentID, student]) => (
-                          <View key={studentID} style={tw`mb-2`}>
-                            {/* Student Level */}
-                            <Text style={tw`text-sm text-black`}>
-                              - {student.studentName} ({student.standard})
-                            </Text>
-                          </View>
+                          <Text key={studentID} style={tw`text-sm text-black`}>
+                            - {student.studentName} ({student.standard})
+                          </Text>
                         ))}
                       </View>
                     )}
@@ -161,47 +162,30 @@ const StudentDetails = () => {
               </View>
             )}
           </View>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      />
 
-      {/* Modal for displaying student details */}
+      {/* Modal for Student Details */}
       {selectedStudent && (
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={closeModal}
-        >
+        <Modal animationType="slide" transparent visible={modalVisible}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
               <View style={tw`bg-white p-5 rounded-lg shadow-lg w-80`}>
                 <Text style={tw`text-xl font-bold mb-4`}>Student Details</Text>
-
-                {/* Conditionally render profile picture */}
                 {selectedStudent.student.profilePic && (
                   <Image
                     source={{ uri: selectedStudent.student.profilePic }}
                     style={tw`w-20 h-20 rounded-full mb-4 mx-auto`}
                   />
                 )}
-
-                {/* Student Information */}
-                <Text style={tw`text-lg font-semibold`}>Student Name: {selectedStudent?.student?.studentName}</Text>
-                <Text>Standard: {selectedStudent?.student?.standard}</Text>
-                <Text>Roll No: {selectedStudent?.student?.rollNo}</Text>
-                <Text>Bus ID: {selectedStudent?.busID}</Text>
-                <Text>Trip ID: {selectedStudent?.tripID}</Text>
-
-                {selectedStudent?.student?.parentName && (
-                  <Text>Parent Name: {selectedStudent?.student?.parentName}</Text>
-                )}
-                {selectedStudent?.student?.parentMobile && (
-                  <Text>Parent Contact: {selectedStudent?.student?.parentMobile}</Text>
-                )}
-
+                <Text>Student Name: {selectedStudent.student.studentName}</Text>
+                <Text>Standard: {selectedStudent.student.standard}</Text>
+                <Text>Bus ID: {selectedStudent.busID}</Text>
+                <Text>Trip ID: {selectedStudent.tripID}</Text>
                 <TouchableOpacity
-                  onPress={closeModal}
                   style={tw`mt-5 p-3 bg-blue-500 rounded-lg`}
+                  onPress={closeModal}
                 >
                   <Text style={tw`text-white text-center`}>Close</Text>
                 </TouchableOpacity>
@@ -210,8 +194,6 @@ const StudentDetails = () => {
           </TouchableWithoutFeedback>
         </Modal>
       )}
-
-
     </View>
   );
 };

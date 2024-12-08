@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Image } from 'react-native';
-
-
 import MapView, { Marker, Polyline } from 'react-native-maps';
-
 import tw from 'tailwind-react-native-classnames';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
