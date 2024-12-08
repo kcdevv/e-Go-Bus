@@ -76,7 +76,7 @@ const Driver = () => {
           tw`w-full px-2 py-3 mb-4 rounded-lg border-2 border-yellow-200`,
           { backgroundColor: "#F9F3F3" },
         ]}
-        placeholder="Bus ID (optional)"
+        placeholder="Bus ID "
         value={busID}
         onChangeText={setBusID}
       />

@@ -19,6 +19,11 @@ const MissingItems = () => {
 
   const router = useRouter();
 
+  // Dynamic IDs (update these dynamically in your application)
+  const schoolID = "stshashyd1234";
+  const busID = "B001";
+  const tripID = "T001";
+
   const pickImageFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -94,8 +99,8 @@ const MissingItems = () => {
         date: new Date().toISOString(),
       };
 
-      // Path to save missing item notifications
-      const path = "schools/stshashyd1234/buses/B001/trips/T001/missingItemNotification";
+      // Construct the dynamic path
+      const path = `schools/${schoolID}/buses/${busID}/trips/${tripID}/missingItemNotification`;
 
       // Get the current data to check the last uploaded number (if any)
       const snapshot = await get(ref(database, path));
@@ -107,7 +112,7 @@ const MissingItems = () => {
       // Create a new item with the incremented number as the key
       await push(ref(database, path), {
         ...newItem,
-        number: itemCount,  // Add a "number" field for the unique number
+        number: itemCount, // Add a "number" field for the unique number
       });
 
       Alert.alert("Item Uploaded", `The item "${title}" has been successfully uploaded.`);

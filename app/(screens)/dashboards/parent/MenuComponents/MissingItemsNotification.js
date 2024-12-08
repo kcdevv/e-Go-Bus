@@ -20,8 +20,8 @@ const MissingItemsNotification = () => {
     // Fetch bus data to get the driver mobile number
     const unsubscribeBus = onValue(busRef, (snapshot) => {
       const busData = snapshot.val();
-      if (busData) {
-        setDriverMobile(busData.driverMobile); // Store driver mobile number
+      if (busData && busData.driverMobile !== driverMobile) {
+        setDriverMobile(busData.driverMobile); // Set driver mobile only if it has changed
       }
     });
 
@@ -29,14 +29,13 @@ const MissingItemsNotification = () => {
     const unsubscribeItems = onValue(missingItemRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const formattedData = Object.keys(data).map((key) => {
-          return {
-            id: key, // Use Firebase key as unique id
-            ...data[key], // Spread the item data
-            driverMobile, // Include the driver mobile number
-          };
-        });
-        setItems(formattedData); // Store all missing item notifications
+        const formattedData = Object.keys(data).map((key) => ({
+          id: key, // Use Firebase key as unique id
+          ...data[key], // Spread the item data
+        }));
+        if (JSON.stringify(formattedData) !== JSON.stringify(items)) {
+          setItems(formattedData); // Set items only if they are different
+        }
       } else {
         setItems([]); // No data case
       }
@@ -48,7 +47,7 @@ const MissingItemsNotification = () => {
       unsubscribeBus();
       unsubscribeItems();
     };
-  }, [driverMobile]); // The dependency array includes driverMobile to ensure the data is combined after fetching driverMobile.
+  }, [driverMobile, items]); // Include driverMobile and items as dependencies for optimized updates
 
   // Function to format the date and remove the time
   const formatDate = (dateString) => {
@@ -64,46 +63,53 @@ const MissingItemsNotification = () => {
     );
   }
 
-  return (
-    <ScrollView style={tw`flex-1 p-4 bg-white`}>
-      {items.length === 0 ? (
+  if (items.length === 0) {
+    return (
+      <View style={tw`flex-1 justify-center items-center bg-white`}>
         <Text style={tw`text-center text-gray-500 mt-20`}>
           No missing items reported yet.
         </Text>
-      ) : (
-        items.map((item) => (
-          <View key={item.id} style={tw`border border-gray-300 rounded-lg p-4 mb-4`}>
-            {/* Display Date without time */}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={tw`flex-1 p-4 bg-white`}>
+      {items.map((item) => (
+        <View key={item.id} style={tw`border border-gray-300 rounded-lg p-4 mb-4`}>
+          {/* Display Date */}
+          {item.date && (
             <Text style={tw`text-lg font-bold mb-2`}>
-              {formatDate(item.date) || "Unknown Date"}
+              {formatDate(item.date)}
             </Text>
-            {/* Display Image */}
-            {item.image ? (
-              <Image
-                source={{ uri: item.image }}
-                style={tw`w-full h-40 rounded-lg mb-4`}
-              />
-            ) : (
-              <View
-                style={tw`w-full h-40 bg-gray-200 rounded-lg items-center justify-center`}
-              >
-                <Text style={tw`text-gray-500`}>No image available</Text>
-              </View>
-            )}
-            {/* Display Title and Message */}
+          )}
+          {/* Display Image */}
+          {item.image && (
+            <Image
+              source={{ uri: item.image }}
+              style={tw`w-full h-40 rounded-lg mb-4`}
+            />
+          )}
+          {/* Display Title */}
+          {item.title && (
             <Text style={tw`text-xl font-semibold mb-2`}>
-              {item.title || "No title provided"}
+              {item.title}
             </Text>
+          )}
+          {/* Display Message */}
+          {item.message && (
             <Text style={tw`text-base mb-4`}>
-              {item.message || "No description provided"}
+              {item.message}
             </Text>
-            {/* Call Driver Button */}
-            {item.driverMobile && (
-              <CallDriverButton phoneNumber={item.driverMobile} />
-            )}
-          </View>
-        ))
-      )}
+          )}
+          {/* Call Driver Button - show it once */}
+          {driverMobile && driverMobile !== "" && (
+            <View style={tw`mb-4`}>
+              <CallDriverButton phoneNumber={driverMobile} />
+            </View>
+          )}
+        </View>
+      ))}
     </ScrollView>
   );
 };

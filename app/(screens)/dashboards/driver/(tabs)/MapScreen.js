@@ -1,260 +1,241 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { StyleSheet, Alert, Animated, View, Text, Image, TouchableOpacity } from "react-native";
-import MapView, { Marker } from "react-native-maps";
-import { Magnetometer } from "expo-sensors";
-import { database } from "../../../../../firebase.config";
-import { loadStoredData, getLocationAsync } from "../services/locationService";
-import Loader from "../../../../components/Loader";
-import { calculateHeading, rotateMarker, updateFirebase } from "../utils/locationUtils";
-import tw from "tailwind-react-native-classnames";
+import React, { useState, useEffect, useRef } from "react";
+import { StyleSheet, View, Text } from "react-native";
+import MapView, { Marker, Polyline } from "react-native-maps";
+import * as Location from 'expo-location';
+import axios from 'axios';
+import Constants from 'expo-constants';
+
+const GOOGLE_MAPS_API_KEY = Constants.expoConfig.android.config.googleMaps.apiKey;
 
 const MapScreen = () => {
-  const [userLocation, setUserLocation] = useState(null);
-  const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
-  const [heading, setHeading] = useState(null);
-  const [busId, setBusId] = useState(null);
-  const [schoolId, setSchoolId] = useState(null);
-  const [driverId, setDriverId] = useState(null);
-  const [tripNumber, setTripNumber] = useState(null);
-  const [tripEnabled, setTripEnabled] = useState(false);
-
-  const rotationValue = useRef(new Animated.Value(0)).current;
+  const [driverLocation, setDriverLocation] = useState(null);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [eta, setEta] = useState(null);
+  const [busSpeed, setBusSpeed] = useState(0);
+  const [pickupPoints] = useState([
+    { latitude: 17.3387, longitude: 78.5486, priority: 1 },
+    { latitude: 17.3693, longitude: 78.5560, priority: 2 },
+    { latitude: 17.3706, longitude: 78.5472, priority: 3 },
+    { latitude: 17.3658, longitude: 78.5355, priority: 5 },
+    { latitude: 17.3637, longitude: 78.5539, priority: 4 },
+  ]);
+  const [prevLocation, setPrevLocation] = useState(null);
+  const [prevTimestamp, setPrevTimestamp] = useState(null);
   const mapRef = useRef(null);
-  const locationIntervalRef = useRef(null);
 
-  // Handle End Trip Confirmation
-  const handleEndTrip = () => {
-    Alert.alert(
-      "Confirm End Trip",
-      "Are you sure you want to end the trip?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Yes, End Trip",
-          onPress: () => setTripEnabled(false),
-        },
-      ]
-    );
-  };
-
-  // Fetch the user's location
-  const fetchUserLocation = useCallback(async () => {
-    try {
-      const location = await getLocationAsync();
-      const updatedLocation = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setUserLocation(updatedLocation);
-      return location;
-    } catch (error) {
-      console.error("Failed to fetch location:", error);
-      throw error;
-    }
-  }, []);
-
-  // Master function to handle all updates
-  const handleUpdates = useCallback(async () => {
-    if (!tripEnabled) {
-      return; // Prevent updates if the trip is not enabled
-    }
-  
-    try {
-      const location = await fetchUserLocation();
-  
-      if (!magnetometerData || magnetometerData.x === undefined || magnetometerData.y === undefined) {
-        console.warn("Magnetometer data not yet available");
-        return;
-      }
-  
-      const currentHeading = calculateHeading(magnetometerData);
-  
-      if (currentHeading === null) {
-        console.warn("Invalid heading value. Skipping Firebase update.");
-        return;
-      }
-  
-      setHeading(currentHeading);
-      rotateMarker(rotationValue, currentHeading);
-      await updateFirebase(database, busId, schoolId, driverId, tripNumber, location, currentHeading);
-    } catch (error) {
-      Alert.alert("Update Error", error.message);
-    }
-  }, [fetchUserLocation, magnetometerData, busId, schoolId, driverId, tripNumber, tripEnabled]);
-  
-
-  // Initialize trip data and set up location tracking
   useEffect(() => {
-    let locationInterval;
-  
-    const initializeTracking = async () => {
+    const fetchDriverLocation = async () => {
       try {
-        const storedData = await loadStoredData();
-        if (storedData) {
-          setBusId(storedData.busId);
-          setSchoolId(storedData.schoolId);
-          setDriverId(storedData.driverId);
-          setTripNumber(storedData.tripNumber);
-        } else {
-          Alert.alert("Error", "Unable to load trip information");
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permission to access location was denied');
           return;
         }
-  
-        if (tripEnabled) {
-          locationInterval = setInterval(handleUpdates, 1000);
-          locationIntervalRef.current = locationInterval;
-        }
+
+        const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const currentLocation = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+        setDriverLocation(currentLocation);
+        await fetchRoute(currentLocation, pickupPoints); // Fetch route once location is updated
       } catch (error) {
-        console.error("Tracking initialization error:", error);
+        console.log('Error fetching location: ', error);
       }
     };
-  
-    initializeTracking();
-  
-    return () => {
-      if (locationIntervalRef.current) {
-        clearInterval(locationIntervalRef.current);
-        locationIntervalRef.current = null;
-      }
-      Magnetometer.removeAllListeners();
-    };
-  }, [handleUpdates, tripEnabled]);
-  
 
-  // Magnetometer heading listener
+    fetchDriverLocation();
+    const locationInterval = setInterval(fetchDriverLocation, 5000); // Reduce interval to 5 seconds
+
+    return () => clearInterval(locationInterval);
+  }, []);
+
   useEffect(() => {
-    Magnetometer.setUpdateInterval(1000);
-    const headingListener = Magnetometer.addListener((data) => {
-      setMagnetometerData(data);
-    });
+    if (driverLocation && prevLocation && prevTimestamp) {
+      const distance = haversineDistance(prevLocation, driverLocation);
+      const timeElapsed = (Date.now() - prevTimestamp) / 3600000; // Time in hours
+      const speed = (distance / timeElapsed).toFixed(2);
+      setBusSpeed(speed);
+    }
+    setPrevLocation(driverLocation);
+    setPrevTimestamp(Date.now());
+  }, [driverLocation]);
 
-    return () => headingListener.remove();
-  }, [userLocation]);
+  const haversineDistance = (start, end) => {
+    const R = 6371; // Radius of Earth in km
+    const lat1 = start.latitude, lon1 = start.longitude;
+    const lat2 = end.latitude, lon2 = end.longitude;
 
-  // Interpolate rotation for marker
-  const rotate = rotationValue.interpolate({
-    inputRange: [0, 360],
-    outputRange: ["0deg", "360deg"],
-  });
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
 
-  // Render early return if trip is not enabled
-  if (!tripEnabled) {
-    return (
-      <View style={tw`flex-1 justify-center items-center p-4`}>
-        <Image
-          source={require("../../../../assets/images/map.png")}
-          style={tw`w-32 h-32 mb-6`}
-        />
-        <Text style={tw`text-2xl font-semibold mb-4`}>
-          {tripEnabled ? "Trip Started" : "Start Your Trip"}
-        </Text>
-        <TouchableOpacity
-          onPress={() => setTripEnabled(true)}
-          style={[
-            tw`py-3 px-6 rounded-full`,
-            tripEnabled ? tw`bg-green-500` : tw`bg-blue-500`,
-          ]}
-        >
-          <Text style={tw`text-white text-lg font-bold`}>
-            {tripEnabled ? "End Trip" : "Start Trip"}
-          </Text>
-        </TouchableOpacity>
-        <Text style={tw`text-sm text-gray-500 mt-4 text-center`}>
-          Please start the trip to enable map features and begin tracking.
-        </Text>
-      </View>
-    );
-  }
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+  };
 
-  // Show loader if user location is not available
-  if (!userLocation && tripEnabled) {
-    return <Loader text="Fetching Location" />;
-  }
+  const fetchRoute = async (startLocation, pickupPoints) => {
+    try {
+      const sortedPickupPoints = [...pickupPoints].sort((a, b) => a.priority - b.priority);
+      const waypoints = sortedPickupPoints.map(
+        (point) => `${point.latitude},${point.longitude}`
+      ).join('|');
+      
+      const origin = `${startLocation.latitude},${startLocation.longitude}`;
+      const destination = `${sortedPickupPoints[sortedPickupPoints.length - 1].latitude},${sortedPickupPoints[sortedPickupPoints.length - 1].longitude}`;
+
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&waypoints=${waypoints}&key=${GOOGLE_MAPS_API_KEY}`;
+      const response = await axios.get(url);
+      console.log(response.data);
+
+      if (response.data.routes && response.data.routes[0] && response.data.routes[0].overview_polyline) {
+        const polyline = response.data.routes[0].overview_polyline.points;
+        const points = decodePolyline(polyline);
+        setRouteCoordinates(points);
+        setEta(Math.round(response.data.routes[0].legs[0].duration.value / 60)); // ETA in minutes
+      } else {
+        console.log("No polyline data found in the response.");
+      }
+    } catch (error) {
+      console.log('Error fetching route: ', error);
+    }
+  };
+
+  // Helper function to decode polyline
+  const decodePolyline = (encodedPolyline) => {
+    let points = [];
+    let index = 0, len = encodedPolyline.length;
+    let lat = 0, lng = 0;
+
+    while (index < len) {
+      let b, shift = 0, result = 0;
+      do {
+        b = encodedPolyline.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      let deltaLat = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
+      lat += deltaLat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encodedPolyline.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      let deltaLng = ((result & 1) !== 0 ? ~(result >> 1) : (result >> 1));
+      lng += deltaLng;
+
+      points.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5
+      });
+    }
+
+    return points;
+  };
+
+  // Ensure we have a valid driver location for the map initial region
+  const initialRegion = driverLocation ? {
+    latitude: driverLocation.latitude,
+    longitude: driverLocation.longitude,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
+  } : {
+    latitude: 17.3693,
+    longitude: 78.5560,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
+  };
 
   return (
-    <View style={tw`flex-1`}>
-      <TouchableOpacity
-        onPress={handleEndTrip}
-        style={styles.endTripButton}
-      >
-        <Text style={styles.endTripButtonText}>End Trip</Text>
-      </TouchableOpacity>
+    <View style={styles.container}>
       <MapView
         ref={mapRef}
         style={styles.map}
-        initialRegion={userLocation ? {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        } : {
-          latitude: 17.385044,
-          longitude: 78.486671,
-          latitudeDelta: 0.1,
-          longitudeDelta: 0.1,
-        }}
-        showsUserLocation
-        zoomEnabled
-        showsCompass
-        showsScale
-        pitchEnabled
+        initialRegion={initialRegion}
+        showsUserLocation={true}
+        followUserLocation={true}
       >
-        {userLocation && (
-          <Marker
-            coordinate={{
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-            }}
-            title="Your Location"
-            style={styles.markerImageFence}
-          >
-            <Animated.Image
-              source={require("../../../../assets/icons/bus.png")}
-              style={[styles.markerImage, { transform: [{ rotate }] }]}
-            />
+        {driverLocation && (
+          <Marker coordinate={driverLocation} title="Driver Location" description="Current location of the bus driver">
+            <View style={styles.driverMarkerContainer}>
+              <Text style={styles.driverMarkerText}>🚍</Text>
+            </View>
           </Marker>
         )}
+
+        {pickupPoints.map((point, index) => (
+          <Marker
+            key={index}
+            coordinate={{ latitude: point.latitude, longitude: point.longitude }}
+            title={`Pickup Point ${index + 1}`}
+            description={`Priority: ${point.priority}`}
+          />
+        ))}
+
+        {routeCoordinates.length > 0 && (
+          <Polyline coordinates={routeCoordinates} strokeColor="#2A73E8" strokeWidth={4} />
+        )}
       </MapView>
+
+      <View style={styles.etaContainer}>
+        <Text style={styles.etaText}>{eta !== null ? `ETA: ${eta} Min` : 'Calculating ETA...'}</Text>
+      </View>
+
+      <View style={styles.speedContainer}>
+        <Text style={styles.speedText}>{busSpeed !== null ? `Speed: ${busSpeed} km/h` : 'Calculating Speed...'}</Text>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   map: {
     width: "100%",
     height: "100%",
   },
-  markerImageFence: {
-    width: 85,
-    height: 85,
+  driverMarkerContainer: {
+    backgroundColor: "lightblue",
+    padding: 5,
+    borderRadius: 5,
   },
-  markerImage: {
-    width: 45,
-    height: 45,
-    resizeMode: "contain",
-    position: "absolute",
-  },
-  endTripButton: {
-    position: "absolute",
-    top: 10,
-    left: "55%",
-    transform: [{ translateX: -75 }],
-    backgroundColor: "red",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    zIndex: 1000,
-  },
-  endTripButtonText: {
-    color: "white",
+  driverMarkerText: {
+    fontSize: 20,
     fontWeight: "bold",
+  },
+  etaContainer: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 10,
+    borderRadius: 5,
+  },
+  etaText: {
+    color: 'white',
     fontSize: 16,
-    textAlign: "center",
+    fontWeight: 'bold',
+  },
+  speedContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 10,
+    borderRadius: 5,
+  },
+  speedText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
