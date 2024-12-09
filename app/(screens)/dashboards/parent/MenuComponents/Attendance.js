@@ -1,44 +1,86 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Calendar } from 'react-native-calendars';
-import tw from 'tailwind-react-native-classnames'; 
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import tw from 'tailwind-react-native-classnames';
+import { fetchAttendance } from '../services/fetchAttendance';
 
 const Attendance = () => {
-  // State to store attendance status (Present or Absent for each day)
-  const [attendance, setAttendance] = useState({
-    '2024-11-10': 'present', // Example: the student is present on 10th November
-    '2024-11-12': 'absent',  // Example: the student is absent on 12th November
-  });
+  const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Function to handle day press
-  const handleDayPress = (day) => {
-    const date = day.dateString;
-    setAttendance((prev) => ({
-      ...prev,
-      [date]: prev[date] === 'present' ? 'absent' : 'present', // Toggle between present and absent
-    }));
-  };
 
-  // Get marked dates for the calendar
-  const markedDates = Object.keys(attendance).reduce((acc, date) => {
-    acc[date] = {
-      selected: true,
-      selectedColor: attendance[date] === 'present' ? 'green' : 'red',
+  // Fetch attendance data on component mount
+  useEffect(() => {
+    const loadAttendance = async () => {
+      try {
+        const data = await fetchAttendance();
+        setAttendance(data);
+      } catch (error) {
+        console.error('Failed to load attendance:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    return acc;
-  }, {});
+  
+    loadAttendance();
+  }, []);
+  
+
+  
+
+  // Render each attendance item
+  const renderItem = ({ item }) => {
+    if (!item.date) return null; // Ensure no crashes on empty objects
+    const isPresent = item.present === 'present';
+    return (
+      <View style={[styles.itemContainer, { backgroundColor: 'white' }]}>
+        <Text
+          style={[
+            styles.text,
+            { color: isPresent ? 'green' : 'red' },
+          ]}
+        >
+          {item.date} - {isPresent ? 'Present' : 'Absent'}
+        </Text>
+      </View>
+    );
+  };
+  
+
+  if (loading) {
+    return (
+      <View style={tw`flex-1 justify-center items-center`}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
 
   return (
-    <View style={tw`flex-1 p-4 bg-white`}>
-      <Text style={tw`text-2xl font-bold text-center mb-4`}>Student Attendance Calendar</Text>
-      <Calendar
-        current={'2024-11-01'}
-        markedDates={markedDates} // Pass the marked dates to the calendar
-        onDayPress={handleDayPress} // Set up day press functionality
-        style={tw`border border-gray-300 rounded-lg`} // Calendar styling using twrnc
+    <View style={tw`flex-1 p-4 bg-white `}>
+      <FlatList
+        data={attendance}
+        keyExtractor={(item) => item.date}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContainer}
       />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  listContainer: {
+    paddingBottom: 20,
+  },
+  itemContainer: {
+    padding: 15,
+    marginBottom: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  text: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
 
 export default Attendance;
