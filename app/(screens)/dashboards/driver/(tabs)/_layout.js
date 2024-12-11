@@ -64,7 +64,7 @@ export default function DriverDashboardLayout() {
 
     <View style={tw`flex-1 shadow-2xl`}>
       {/* Header with Hamburger Menu */}
-      <View style={[tw`flex-row items-center justify-between p-4 pt-5`, { backgroundColor: "#FCD32D" }]}>
+      <View style={[tw`flex-row items-center justify-between p-4 pt-9 pb-2`, { backgroundColor: "#FCD32D" }]}>
         <Text style={tw`text-lg font-bold`}>e-Go Bus</Text>
         <TouchableOpacity onPress={toggleMenu}>
           <FontAwesome name="bars" size={24} color="black" />
