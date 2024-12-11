@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { StyleSheet, Alert, Animated, View, Text, Image, TouchableOpacity } from "react-native";
+import { StyleSheet, Alert, Animated, View, Text, Image, TouchableOpacity, Platform, Linking } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Magnetometer } from "expo-sensors";
 import { database } from "../../../../../firebase.config";
@@ -9,6 +9,7 @@ import { calculateHeading, updateFirebase } from "../utils/locationUtils";
 import tw from "tailwind-react-native-classnames";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
+import * as IntentLauncher from 'expo-intent-launcher';
 
 const LOCATION_TRACKING = "location-tracking";
 
@@ -20,12 +21,10 @@ TaskManager.defineTask(LOCATION_TRACKING, async ({ data, error }) => {
   if (data) {
     const { locations } = data;
     const location = locations[0];
-    // Handle background location update
     try {
       const storedData = await loadStoredData();
       if (storedData) {
-        // Get heading from location.coords.heading if available
-        const heading = location.coords.heading;
+        const heading = location.coords.heading || 90; // Default to East if heading is 0/null
         await updateFirebase(
           database,
           storedData.busId,
@@ -33,7 +32,7 @@ TaskManager.defineTask(LOCATION_TRACKING, async ({ data, error }) => {
           storedData.driverId,
           storedData.tripNumber,
           location,
-          heading // Use actual heading from location
+          heading
         );
       }
     } catch (err) {
@@ -45,21 +44,31 @@ TaskManager.defineTask(LOCATION_TRACKING, async ({ data, error }) => {
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
-  const [heading, setHeading] = useState(null);
+  const [heading, setHeading] = useState(90); // Default to East instead of null
   const [busId, setBusId] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
   const [driverId, setDriverId] = useState(null);
   const [tripNumber, setTripNumber] = useState(null);
   const [tripEnabled, setTripEnabled] = useState(false);
+  const [locationPermission, setLocationPermission] = useState(false);
+  const [lastValidHeading, setLastValidHeading] = useState(90); // Default to East
 
-  const rotationValue = useRef(new Animated.Value(0)).current;
+  const rotationValue = useRef(new Animated.Value(90)).current; // Default to East
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
+  const headingIntervalRef = useRef(null);
   const headingBuffer = useRef([]);
   const locationBuffer = useRef([]);
-  const animatedLocation = useRef(new Animated.ValueXY()).current;
+  const lastLocationRef = useRef(null);
 
-  // Handle End Trip Confirmation
+  useEffect(() => {
+    const checkLocationPermission = async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+    };
+    checkLocationPermission();
+  }, []);
+
   const handleEndTrip = () => {
     Alert.alert(
       "Confirm End Trip",
@@ -72,6 +81,9 @@ const MapScreen = () => {
         {
           text: "Yes, End Trip",
           onPress: async () => {
+            if (headingIntervalRef.current) {
+              clearInterval(headingIntervalRef.current);
+            }
             await Location.stopLocationUpdatesAsync(LOCATION_TRACKING);
             setTripEnabled(false);
           },
@@ -80,37 +92,139 @@ const MapScreen = () => {
     );
   };
 
-  // Start location tracking
-  const startLocationTracking = async () => {
+  const requestLocationPermissions = async () => {
     try {
-      const { status } = await Location.requestBackgroundPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Background location access is required for trip tracking");
-        return;
+      // Request foreground permissions first
+      const foregroundStatus = await Location.requestForegroundPermissionsAsync();
+      if (foregroundStatus.status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'Location access is required for trip tracking. Please grant permission.',
+          [{ text: 'OK' }]
+        );
+        return false;
       }
 
-      await Location.startLocationUpdatesAsync(LOCATION_TRACKING, {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 1000,
-        distanceInterval: 0,
-        foregroundService: {
-          notificationTitle: "Trip in Progress",
-          notificationBody: "Location tracking is active",
-        },
-        // Enable heading updates in background
-        showsBackgroundLocationIndicator: true,
-      });
+      // Then request background permissions
+      const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus.status !== 'granted') {
+        Alert.alert(
+          'Background Location Required',
+          'Background location access is required for continuous trip tracking. Please grant permission.',
+          [{ text: 'OK' }]
+        );
+        return false;
+      }
 
-      setTripEnabled(true);
-    } catch (err) {
-      console.error("Error starting location tracking:", err);
-      Alert.alert("Error", "Failed to start location tracking");
+      // If both permissions are granted
+      if (foregroundStatus.status === 'granted' && backgroundStatus.status === 'granted') {
+        // Enable location services
+        const locationEnabled = await Location.hasServicesEnabledAsync();
+        if (!locationEnabled) {
+          Alert.alert(
+            'Location Services Disabled',
+            'Please enable location services to use this feature.',
+            [{ text: 'OK' }]
+          );
+          return false;
+        }
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      Alert.alert('Permission Error', error.message);
+      return false;
     }
   };
 
-  // Fetch the user's location
+  const startLocationTracking = async () => {
+    try {
+      const permissionsGranted = await requestLocationPermissions();
+      if (!permissionsGranted) return;
+
+      // Configure high accuracy location tracking
+      const locationConfig = {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: Platform.select({
+          ios: 300,  // iOS handles background updates differently
+          android: 1000 // Android needs a slightly longer interval to save battery
+        }),
+        distanceInterval: 1, // Update every 1 meter
+        foregroundService: {
+          notificationTitle: "Trip in Progress",
+          notificationBody: "Location tracking is active",
+          notificationColor: "#FCD32D",
+        },
+        // Ensure reliable background updates
+        pausesUpdatesAutomatically: false,
+        activityType: Location.ActivityType.AutomotiveNavigation,
+        showsBackgroundLocationIndicator: true, // iOS only
+      };
+
+      await Location.startLocationUpdatesAsync(LOCATION_TRACKING, locationConfig);
+
+      // Start heading updates every 100ms
+      headingIntervalRef.current = setInterval(async () => {
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation
+          });
+          
+          let currentHeading = location.coords.heading;
+          
+          // Use magnetometer as backup or if heading is 0
+          if (!currentHeading && magnetometerData) {
+            currentHeading = calculateHeading(magnetometerData);
+          }
+
+          // If still no valid heading, use last valid or default to East
+          currentHeading = currentHeading || lastValidHeading || 90;
+
+          const smoothedHeading = calculateSmoothedHeading(currentHeading);
+          setHeading(smoothedHeading);
+
+          // Animate the rotation
+          Animated.timing(rotationValue, {
+            toValue: smoothedHeading,
+            duration: 100,
+            useNativeDriver: true
+          }).start();
+          
+        } catch (err) {
+          console.error("Error updating heading:", err);
+        }
+      }, 100);
+
+      setTripEnabled(true);
+      setLocationPermission(true);
+    } catch (err) {
+      console.error("Error starting location tracking:", err);
+      Alert.alert(
+        "Location Tracking Error",
+        "Failed to start location tracking. Please ensure location services are enabled and try again."
+      );
+    }
+  };
+
+  const calculateBearingBetweenLocations = (lat1, lon1, lat2, lon2) => {
+    const toRad = (degree) => degree * Math.PI / 180;
+    const toDeg = (rad) => rad * 180 / Math.PI;
+
+    const dLon = toRad(lon2 - lon1);
+    const lat1Rad = toRad(lat1);
+    const lat2Rad = toRad(lat2);
+
+    const y = Math.sin(dLon) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+              Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+    let bearing = toDeg(Math.atan2(y, x));
+    
+    return (bearing + 360) % 360;
+  };
+
   const fetchUserLocation = useCallback(async () => {
-    if (!tripEnabled) return null;
+    if (!tripEnabled || !locationPermission) return null;
     
     try {
       const location = await getLocationAsync();
@@ -121,13 +235,24 @@ const MapScreen = () => {
         longitudeDelta: 0.01,
       };
 
-      // Smooth location updates using buffer
+      // Calculate heading from consecutive locations if speed is above threshold
+      if (lastLocationRef.current && location.coords.speed > 1) {
+        const calculatedBearing = calculateBearingBetweenLocations(
+          lastLocationRef.current.latitude,
+          lastLocationRef.current.longitude,
+          location.coords.latitude,
+          location.coords.longitude
+        );
+        location.coords.heading = calculatedBearing || 90; // Default to East if calculation fails
+      }
+
+      lastLocationRef.current = updatedLocation;
+
       locationBuffer.current.push(updatedLocation);
-      if (locationBuffer.current.length > 5) {
+      if (locationBuffer.current.length > 3) {
         locationBuffer.current.shift();
       }
 
-      // Calculate average location
       const avgLocation = {
         latitude: locationBuffer.current.reduce((acc, loc) => acc + loc.latitude, 0) / locationBuffer.current.length,
         longitude: locationBuffer.current.reduce((acc, loc) => acc + loc.longitude, 0) / locationBuffer.current.length,
@@ -135,81 +260,57 @@ const MapScreen = () => {
         longitudeDelta: updatedLocation.longitudeDelta
       };
 
-      // Animate to new location smoothly
-      Animated.spring(animatedLocation, {
-        toValue: { x: avgLocation.longitude, y: avgLocation.latitude },
-        useNativeDriver: true,
-        friction: 6,
-        tension: 30
-      }).start();
-
       setUserLocation(avgLocation);
       return location;
     } catch (error) {
       console.error("Failed to fetch location:", error);
       throw error;
     }
-  }, [tripEnabled]);
+  }, [tripEnabled, locationPermission]);
 
-  // Calculate smoothed heading using moving average
   const calculateSmoothedHeading = (newHeading) => {
-    const BUFFER_SIZE = 5; // Number of readings to average
+    if (!newHeading || isNaN(newHeading)) {
+      return lastValidHeading || 90; // Default to East if no valid heading
+    }
+
+    const BUFFER_SIZE = 5;
+    const MAX_HEADING_CHANGE = 45; // Maximum allowed heading change in degrees
+    
+    // Remove outliers
+    if (lastValidHeading !== null) {
+      const headingDiff = Math.abs(newHeading - lastValidHeading);
+      if (headingDiff > MAX_HEADING_CHANGE && headingDiff < (360 - MAX_HEADING_CHANGE)) {
+        return lastValidHeading;
+      }
+    }
     
     headingBuffer.current.push(newHeading);
     if (headingBuffer.current.length > BUFFER_SIZE) {
       headingBuffer.current.shift();
     }
 
-    // Calculate average heading
-    const sum = headingBuffer.current.reduce((acc, val) => acc + val, 0);
-    return sum / headingBuffer.current.length;
+    // Median filter
+    const sortedHeadings = [...headingBuffer.current].sort((a, b) => a - b);
+    const medianHeading = sortedHeadings[Math.floor(sortedHeadings.length / 2)];
+    
+    setLastValidHeading(medianHeading);
+    return medianHeading;
   };
 
-  // Master function to handle all updates
   const handleUpdates = useCallback(async () => {
-    if (!tripEnabled) return;
+    if (!tripEnabled || !locationPermission) return;
 
     try {
       const location = await fetchUserLocation();
       if (!location) return;
 
-      let currentHeading;
-
-      // Try to get heading from location first
-      if (location.coords.heading !== null) {
-        currentHeading = location.coords.heading;
-      } else if (magnetometerData && magnetometerData.x !== undefined && magnetometerData.y !== undefined) {
-        // Fall back to magnetometer if location heading not available
-        const rawHeading = calculateHeading(magnetometerData);
-        if (rawHeading !== null) {
-          currentHeading = rawHeading;
-        } else {
-          console.warn("Invalid heading value. Skipping Firebase update.");
-          return;
-        }
-      } else {
-        console.warn("No heading data available");
-        return;
-      }
-
-      const smoothedHeading = calculateSmoothedHeading(currentHeading);
-      setHeading(smoothedHeading);
-      
-      // Use smooth easing for rotation animation
-      Animated.spring(rotationValue, {
-        toValue: smoothedHeading,
-        useNativeDriver: true,
-        friction: 7,
-        tension: 40
-      }).start();
-
-      await updateFirebase(database, busId, schoolId, driverId, tripNumber, location, smoothedHeading);
+      const currentHeading = heading || lastValidHeading || 90; // Default to East if no heading
+      await updateFirebase(database, busId, schoolId, driverId, tripNumber, location, currentHeading);
     } catch (error) {
       Alert.alert("Update Error", error.message);
     }
-  }, [fetchUserLocation, magnetometerData, busId, schoolId, driverId, tripNumber, tripEnabled]);
+  }, [fetchUserLocation, heading, busId, schoolId, driverId, tripNumber, tripEnabled, locationPermission]);
 
-  // Initialize trip data and set up location tracking
   useEffect(() => {
     const initializeTracking = async () => {
       try {
@@ -224,8 +325,8 @@ const MapScreen = () => {
           return;
         }
 
-        if (tripEnabled) {
-          locationIntervalRef.current = setInterval(handleUpdates, 1000);
+        if (tripEnabled && locationPermission) {
+          locationIntervalRef.current = setInterval(handleUpdates, 300);
         }
       } catch (error) {
         console.error("Tracking initialization error:", error);
@@ -238,30 +339,30 @@ const MapScreen = () => {
       if (locationIntervalRef.current) {
         clearInterval(locationIntervalRef.current);
       }
+      if (headingIntervalRef.current) {
+        clearInterval(headingIntervalRef.current);
+      }
       Magnetometer.removeAllListeners();
     };
-  }, [handleUpdates, tripEnabled]);
+  }, [handleUpdates, tripEnabled, locationPermission]);
 
-  // Magnetometer heading listener with increased update frequency
   useEffect(() => {
-    if (tripEnabled) {
-      Magnetometer.setUpdateInterval(100); // Increased frequency for smoother updates
+    if (tripEnabled && locationPermission) {
+      Magnetometer.setUpdateInterval(50);
       const headingListener = Magnetometer.addListener((data) => {
         setMagnetometerData(data);
       });
 
       return () => headingListener.remove();
     }
-  }, [tripEnabled, userLocation]);
+  }, [tripEnabled, locationPermission, userLocation]);
 
-  // Interpolate rotation for marker with smoother transitions
   const rotate = rotationValue.interpolate({
     inputRange: [0, 360],
     outputRange: ["0deg", "360deg"],
     extrapolate: 'clamp'
   });
 
-  // Render early return if trip is not enabled
   if (!tripEnabled) {
     return (
       <View style={tw`flex-1 justify-center items-center p-4`}>
@@ -290,7 +391,6 @@ const MapScreen = () => {
     );
   }
 
-  // Show loader if user location is not available
   if (!userLocation && tripEnabled) {
     return <Loader text="Fetching Location" />;
   }
