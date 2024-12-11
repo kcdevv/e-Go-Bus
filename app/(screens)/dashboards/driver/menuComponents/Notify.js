@@ -32,7 +32,7 @@ const Notify = () => {
     return (
         <View style={tw`flex-1 bg-white`}>
             {/* Header */}
-            <View style={[tw`flex-row items-center p-4`, { height: 60, backgroundColor: '#FCD32D' }]}>
+            <View style={[tw`flex-row items-center px-4 pb-2 pt-9`, { height: 75, backgroundColor: '#FCD32D' }]}>
                 <TouchableOpacity onPress={() => router.back()} style={tw`mr-4`}>
                 <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
