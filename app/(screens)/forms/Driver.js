@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getPickupPointsData } from '../services/driverAuth';
 
 const Driver = () => {
   const [schoolID, setSchoolID] = useState("");
@@ -24,23 +25,28 @@ const Driver = () => {
       await AsyncStorage.setItem('busID', busID);
       await AsyncStorage.setItem('driverID', driverID);
       await AsyncStorage.setItem('tripID', tripNumber);
-  
+
       console.log("Form data stored in AsyncStorage");
+
+      // Fetch pickup points data
+      const pickupPoints = await getPickupPointsData();
+      console.log("Fetched Pickup Points: ", pickupPoints);
+
+      // Now, you can navigate or do something with the fetched data
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: "dashboards/driver",
+          },
+        ],
+      });
     } catch (error) {
-      console.error("Error storing data in AsyncStorage:", error);
+      console.error("Error storing data or fetching pickup points:", error);
     }
-  
-    // Navigate to the dashboard
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: "dashboards/driver",
-        },
-      ],
-    });
   };
-  
+
+
 
   const disabled =
     schoolID.length === 0 || driverID.length === 0 || tripNumber.length === 0;
@@ -91,9 +97,8 @@ const Driver = () => {
       />
       <TouchableOpacity
         style={[
-          tw`py-3 px-7 rounded-xl border border-gray-400 ${
-            disabled ? "opacity-40" : "opacity-100"
-          }`,
+          tw`py-3 px-7 rounded-xl border border-gray-400 ${disabled ? "opacity-40" : "opacity-100"
+            }`,
           { backgroundColor: "#FCD32D" },
         ]}
         onPress={handleSubmit}

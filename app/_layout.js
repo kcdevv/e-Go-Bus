@@ -1,6 +1,9 @@
 import { Stack } from "expo-router"
-import '../firebase.config'
-// import { SafeAreaView } from "react-native-safe-area-context"
+import { initializeApp } from 'firebase/app';
+import firebaseConfig  from '../firebase.config'
+
+const app = initializeApp(firebaseConfig); 
+
 const RootLayout = () => {
   
   return (

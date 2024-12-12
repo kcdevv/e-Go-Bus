@@ -44,8 +44,8 @@ const Parent = () => {
       try {
         const deviceToken = await registerDeviceToken(schoolID, studentID, busID, tripID);
         const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl, deviceToken);
-        
-        
+
+
         if (response) {
           await AsyncStorage.setItem('schoolID', JSON.stringify(schoolID));
           await AsyncStorage.setItem('busID', JSON.stringify(busID));
@@ -53,13 +53,13 @@ const Parent = () => {
           await AsyncStorage.setItem('studentID', JSON.stringify(studentID));
 
           const keys = await AsyncStorage.getAllKeys();
-  console.log('All AsyncStorage keys:', keys);
+          console.log('All AsyncStorage keys:', keys);
 
-  for (const key of keys) {
-    const value = await AsyncStorage.getItem(key);
-    console.log(`Key: ${key}, Value: ${value}`);
-  }
-  
+          for (const key of keys) {
+            const value = await AsyncStorage.getItem(key);
+            console.log(`Key: ${key}, Value: ${value}`);
+          }
+
           navigation.reset({
             index: 0,
             routes: [{ name: "dashboards/parent" }],

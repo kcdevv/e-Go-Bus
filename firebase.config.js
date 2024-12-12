@@ -30,3 +30,4 @@ const storage = getStorage(app);
 const database = getDatabase(app);
 
 export { storage, database };
+export default firebaseConfig;
