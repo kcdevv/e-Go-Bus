@@ -10,7 +10,7 @@ export default function HomeLayout() {
       
       {/* SafeAreaView ensures content starts below status bar */}
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
+        {/* <View style={styles.container}> */}
           <Stack
             screenOptions={{
               headerShown: false, // Show the header properly
@@ -45,7 +45,7 @@ export default function HomeLayout() {
               options={{ title: "e-Go Bus" }}
             />
           </Stack>
-        </View>
+        {/* </View> */}
       </SafeAreaView>
     </>
   );

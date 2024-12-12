@@ -5,6 +5,7 @@ export default {
     name: "e-Go Bus",
     slug: "e-Go-Bus",
     scheme: "e-Go-Bus",
+    owner: "e-go-bus",
     newArchEnabled: true,
     version: "1.0.0",
     orientation: "portrait",
