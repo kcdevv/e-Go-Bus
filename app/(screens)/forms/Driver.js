@@ -26,11 +26,11 @@ const Driver = () => {
       await AsyncStorage.setItem('driverID', driverID);
       await AsyncStorage.setItem('tripID', tripNumber);
 
-      console.log("Form data stored in AsyncStorage");
+      console.log("Form data stored in AsyncStorage from mapscreen");
 
       // Fetch pickup points data
       const pickupPoints = await getPickupPointsData();
-      console.log("Fetched Pickup Points: ", pickupPoints);
+      console.log("Fetched Pickup Points DRIVER: ", JSON.stringify(pickupPoints, null, 2));
 
       // Now, you can navigate or do something with the fetched data
       navigation.reset({
@@ -45,7 +45,7 @@ const Driver = () => {
       console.error("Error storing data or fetching pickup points:", error);
     }
   };
-
+  
 
 
   const disabled =

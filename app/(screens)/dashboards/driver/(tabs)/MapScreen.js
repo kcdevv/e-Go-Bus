@@ -8,6 +8,7 @@ import { loadStoredData, getLocationAsync } from "../services/locationService";
 import Loader from "../../../../components/Loader";
 import { calculateHeading, rotateMarker, updateFirebase } from "../utils/locationUtils";
 import tw from "tailwind-react-native-classnames";
+import { getStoredPickupPoints } from "../services/pickuppointsstored"; // Import the function
 
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -21,14 +22,19 @@ const MapScreen = () => {
   const locationIntervalRef = useRef(null);
   const watchPositionRef = useRef(null);
 
-  // Load trip details on mount
+  // Load trip details and pickup points on mount
   useEffect(() => {
     const loadTripData = async () => {
       const data = await loadStoredData();
       setTripDetails(data);
+
+      // Get and log the pickup points from AsyncStorage
+      const pickupPoints = await getStoredPickupPoints();
+      console.log('Retrieved Pickup Point from mapscreen:', pickupPoints[1]); // Console log the pickup points
     };
     loadTripData();
   }, []);
+  
 
   const handleEndTrip = () => {
     Alert.alert(
@@ -55,7 +61,6 @@ const MapScreen = () => {
       ]
     );
   };
-  
 
   // Fetch the user's location
   const fetchUserLocation = useCallback(async () => {

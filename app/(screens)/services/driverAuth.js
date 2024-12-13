@@ -1,33 +1,44 @@
-import { database } from '../../../firebase.config'; // Ensure this path is correct
+import { database } from '../../../firebase.config'; 
 import { ref as dbRef, get } from 'firebase/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getPickupPointsData = async () => {
   try {
-    // Retrieve stored IDs from AsyncStorage
     const schoolID = await AsyncStorage.getItem('schoolID');
     const busID = await AsyncStorage.getItem('busID');
     const tripID = await AsyncStorage.getItem('tripID');
+
+    console.log('schoolID:', schoolID, 'busID:', busID, 'tripID:', tripID); // Debugging logs
 
     if (!schoolID || !busID || !tripID) {
       throw new Error('Missing data in AsyncStorage');
     }
 
-    // Reference to the pickupPoints in the database
     const pickupPointsRef = dbRef(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints`);
-
-    // Fetch data from Firebase Realtime Database
     const snapshot = await get(pickupPointsRef);
 
+    console.log('Firebase Snapshot:', snapshot.exists() ? snapshot.val() : 'No data found'); // Log the entire snapshot
+
     if (snapshot.exists()) {
-      return snapshot.val(); 
+      const pickupPoints = snapshot.val();
+      const pickupPointsArray = Array.isArray(pickupPoints) ? pickupPoints : Object.values(pickupPoints);
+
+      const unpackedPickupPoints = pickupPointsArray.map(pickupPoint => ({
+        ...pickupPoint, 
+        students: pickupPoint.students.map(student => ({ ...student }))
+      }));
+
+      await AsyncStorage.setItem('pickupPoints', JSON.stringify(unpackedPickupPoints));
+      console.log('Stored Pickup Points:', unpackedPickupPoints); // Log what is being stored
+      return unpackedPickupPoints; 
     } else {
       throw new Error('No pickup points found for this trip');
     }
   } catch (error) {
     console.error("Error fetching pickup points:", error);
-    throw error; // Optionally, handle this error in the component
+    throw error; 
   }
 };
 
 export { getPickupPointsData };
+getPickupPointsData();
