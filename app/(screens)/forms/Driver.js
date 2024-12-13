@@ -30,7 +30,7 @@ const Driver = () => {
 
       // Fetch pickup points data
       const pickupPoints = await getPickupPointsData();
-      console.log("Fetched Pickup Points DRIVER: ", JSON.stringify(pickupPoints, null, 2));
+     console.log("Fetched Pickup Points DRIVER: ", JSON.stringify(pickupPoints, null, 2));
 
       // Now, you can navigate or do something with the fetched data
       navigation.reset({
@@ -42,7 +42,7 @@ const Driver = () => {
         ],
       });
     } catch (error) {
-      console.error("Error storing data or fetching pickup points:", error);
+      console.error("Error storing data or fetching pickup pointss:", error);
     }
   };
   
