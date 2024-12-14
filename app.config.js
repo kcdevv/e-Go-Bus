@@ -49,7 +49,7 @@ export default {
       package: "com.kcjod.eGoBus",
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY, // Google Maps API Key
+          apiKey: process.env.GOOGLE_MAPS_API_KEY,
         },
       },
       useNextNotificationsApi: true,

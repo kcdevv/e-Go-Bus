@@ -30,7 +30,12 @@ const Driver = () => {
 
       // Fetch pickup points data
       const pickupPoints = await getPickupPointsData();
-     console.log("Fetched Pickup Points DRIVER: ", JSON.stringify(pickupPoints, null, 2));
+      const pickupLocations = pickupPoints.map(point => point.pickupLocation);
+      
+      // Store pickup locations in AsyncStorage
+      await AsyncStorage.setItem('pickupLocations', JSON.stringify(pickupLocations));
+
+      console.log("Pickup locations stored in AsyncStorage:", pickupLocations);
 
       // Now, you can navigate or do something with the fetched data
       navigation.reset({
@@ -42,7 +47,7 @@ const Driver = () => {
         ],
       });
     } catch (error) {
-      console.error("Error storing data or fetching pickup pointss:", error);
+      console.error("Error storing data or fetching pickup points:", error);
     }
   };
   

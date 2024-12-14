@@ -15,6 +15,7 @@ const getPickupPointsData = async () => {
     // Fetch data from Firebase Realtime Database
     const snapshot = await get(pickupPointsRef);
     if (snapshot.exists()) {
+      console.log(snapshot.val());
       return snapshot.val(); 
     } else {
       throw new Error('No pickup points found for this trip');

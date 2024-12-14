@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { StyleSheet, Alert, Animated, View, Text, Image, TouchableOpacity } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Polyline } from "react-native-maps";
 import { Magnetometer } from "expo-sensors";
 import * as Location from "expo-location"; // Added Location import
 import { database } from "../../../../../firebase.config";
@@ -8,12 +8,19 @@ import { loadStoredData, getLocationAsync } from "../services/locationService";
 import Loader from "../../../../components/Loader";
 import { calculateHeading, rotateMarker, updateFirebase } from "../utils/locationUtils";
 import tw from "tailwind-react-native-classnames";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import polyline from '@mapbox/polyline';
+import Constants from "expo-constants";
+
 const MapScreen = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
   const [heading, setHeading] = useState(null);
   const [tripEnabled, setTripEnabled] = useState(false);
   const [tripDetails, setTripDetails] = useState(null);
+  const [pickupPoints, setPickupPoints] = useState([]);
+  const [directions, setDirections] = useState([]);
+  const [showPickupConfirmation, setShowPickupConfirmation] = useState(false);
 
   const rotationValue = useRef(new Animated.Value(0)).current;
   const mapRef = useRef(null);
@@ -26,13 +33,24 @@ const MapScreen = () => {
       const data = await loadStoredData();
       setTripDetails(data);
 
-      // Get and log the pickup points from AsyncStorage
-      const pickupPoints = await getStoredPickupPoints();
-      console.log('Retrieved Pickup Point from mapscreen:', pickupPoints[0]); // Console log the pickup points
+      try {
+        // Fetch pickup points from AsyncStorage
+        const pickupLocationsStr = await AsyncStorage.getItem('pickupLocations');
+        if (pickupLocationsStr) {
+          const points = JSON.parse(pickupLocationsStr).map(point => {
+            const [latitude, longitude] = point.split(',').map(Number);
+            return { latitude, longitude };
+          });
+          setPickupPoints(points);
+          console.log('Retrieved Pickup Points from AsyncStorage:', points);
+        }
+      } catch (error) {
+        console.error("Error fetching pickup points from AsyncStorage:", error);
+      }
     };
     loadTripData();
   }, []);
-  
+
 
   const handleEndTrip = () => {
     Alert.alert(
@@ -40,8 +58,8 @@ const MapScreen = () => {
       "Are you sure you want to end the trip?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Yes, End Trip", 
+        {
+          text: "Yes, End Trip",
           onPress: async () => {
             // Ensure the watcher exists before attempting to remove it
             if (watchPositionRef.current) {
@@ -83,6 +101,41 @@ const MapScreen = () => {
     }
   }, []);
 
+  // Fetch directions from user location to first pickup point
+  const fetchDirections = useCallback(async (origin, destination) => {
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${Constants.expoConfig.android.config.googleMaps.apiKey}`);
+      const data = await response.json();
+      if (data.routes.length) {
+        const points = polyline.decode(data.routes[0].overview_polyline.points);
+        const coords = points.map(point => ({
+          latitude: point[0],
+          longitude: point[1]
+        }));
+        setDirections(coords);
+      }
+    } catch (error) {
+      console.error("Failed to fetch directions:", error);
+    }
+  }, []);
+
+  // Function to calculate distance between two coordinates
+  const getDistance = (coord1, coord2) => {
+    const R = 6371e3; // metres
+    const φ1 = coord1.latitude * Math.PI/180; // φ, λ in radians
+    const φ2 = coord2.latitude * Math.PI/180;
+    const Δφ = (coord2.latitude-coord1.latitude) * Math.PI/180;
+    const Δλ = (coord2.longitude-coord1.longitude) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    const distance = R * c; // in metres
+    return distance;
+  };
+
   // Master function to handle all updates
   const handleUpdates = useCallback(async () => {
     if (!tripEnabled || !tripDetails) return;
@@ -122,10 +175,21 @@ const MapScreen = () => {
         currentHeading
       );
 
+      // Fetch directions to the first pickup point
+      if (pickupPoints && pickupPoints.length > 0) {
+        await fetchDirections(location.coords, pickupPoints[0]);
+
+        // Check if user is near the first pickup point
+        const distance = getDistance(location.coords, pickupPoints[0]);
+        if (distance <= 50) {
+          setShowPickupConfirmation(true);
+        }
+      }
+
     } catch (error) {
       Alert.alert("Update Error", error.message);
     }
-  }, [fetchUserLocation, magnetometerData, tripEnabled, tripDetails]);
+  }, [fetchUserLocation, magnetometerData, tripEnabled, tripDetails, pickupPoints, fetchDirections]);
 
   // Initialize trip data and set up location tracking
   useEffect(() => {
@@ -150,12 +214,12 @@ const MapScreen = () => {
                   longitudeDelta: 0.01,
                 };
                 setUserLocation(updatedLocation);
-                
+
                 // Update heading from GPS if available
                 if (location.coords.heading !== null) {
                   setHeading(location.coords.heading);
                   rotateMarker(rotationValue, location.coords.heading + 90);
-                  
+
                   // Update Firebase when location changes
                   if (tripDetails) {
                     await updateFirebase(
@@ -172,7 +236,7 @@ const MapScreen = () => {
               }
             );
           }
-          
+
           locationInterval = setInterval(handleUpdates, 1000);
           locationIntervalRef.current = locationInterval;
         }
@@ -239,6 +303,15 @@ const MapScreen = () => {
     return <Loader text="Fetching Location" />;
   }
 
+  // Handle pickup confirmation
+  const handlePickupConfirmation = (confirmed) => {
+    if (confirmed) {
+      // Move to the next pickup point
+      setPickupPoints(prevPoints => prevPoints.slice(1));
+    }
+    setShowPickupConfirmation(false);
+  };
+
   return (
     <View style={tw`flex-1`}>
       <TouchableOpacity onPress={handleEndTrip} style={styles.endTripButton}>
@@ -253,19 +326,42 @@ const MapScreen = () => {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
-        showsUserLocation
+        showsUserLocation={false}
         showsCompass
         zoomEnabled
         pitchEnabled
         followsUserLocation
       >
-        <Marker coordinate={userLocation} title="Your Location">
+        <Marker coordinate={userLocation} title="Your Location" anchor={{ x: 0.5, y: 0.5 }}>
           <Animated.Image
             source={require("../../../../assets/icons/bus.png")}
             style={[styles.markerImage, { transform: [{ rotate }] }]}
           />
         </Marker>
+        {pickupPoints && pickupPoints.length > 0 && (
+          <Marker coordinate={pickupPoints[0]} title="Pickup Point" />
+        )}
+        {directions.length > 0 && (
+          <Polyline
+            coordinates={directions}
+            strokeWidth={4}
+            strokeColor="blue"
+          />
+        )}
       </MapView>
+      {showPickupConfirmation && (
+        <View style={styles.confirmationContainer}>
+          <Text style={styles.confirmationText}>Did you reach the pickup point?</Text>
+          <View style={styles.confirmationButtons}>
+            <TouchableOpacity onPress={() => handlePickupConfirmation(true)} style={styles.confirmationButton}>
+              <Text style={styles.confirmationButtonText}>Yes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handlePickupConfirmation(false)} style={styles.confirmationButton}>
+              <Text style={styles.confirmationButtonText}>No</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -297,6 +393,41 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     textAlign: "center",
+  },
+  confirmationContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+  },
+  confirmationText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  confirmationButtons: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  confirmationButton: {
+    backgroundColor: "blue",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  confirmationButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
 
