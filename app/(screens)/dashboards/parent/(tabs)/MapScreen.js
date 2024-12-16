@@ -231,4 +231,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MapScreen; 
+export default MapScreen;

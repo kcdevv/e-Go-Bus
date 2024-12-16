@@ -2,28 +2,39 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Image, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage"; // Firebase Storage
-import { push, ref, get } from "firebase/database"; // Firebase Realtime Database
-import { storage, database } from "../../../../../firebase.config"; // Ensure correct path
+import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
+import { push, ref, get } from "firebase/database";
+import { storage, database } from "../../../../../firebase.config";
 import tw from "tailwind-react-native-classnames";
 import { useRouter } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+
+// Function to get details from AsyncStorage
+const getDetails = async () => {
+  try {
+    const schoolID = await AsyncStorage.getItem('schoolID');
+    const busID = await AsyncStorage.getItem('busID');
+
+    if (!schoolID || !busID) {
+      throw new Error('Missing data in AsyncStorage');
+    }
+
+    return { schoolID, busID };
+  } catch (error) {
+    Alert.alert("Error fetching data from AsyncStorage", error.message);
+    return null;
+  }
+};
 
 const MissingItems = () => {
   const [title, setTitle] = useState("Lost Item Found");
-  const [message, setMessage] = useState(
-    "A missing item was found on the bus. Please check and respond."
-  );
+  const [message, setMessage] = useState("A missing item was found on the bus. Please check and respond.");
   const [photo, setPhoto] = useState(null);
-  const [uploading, setUploading] = useState(false); // To manage loading state
-
+  const [uploading, setUploading] = useState(false);
   const router = useRouter();
 
-  // Dynamic IDs (update these dynamically in your application)
-  const schoolID = "stshashyd1234";
-  const busID = "B001";
-  const tripID = "T001";
-
+  // Function to pick image from gallery
   const pickImageFromLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -36,6 +47,7 @@ const MissingItems = () => {
     }
   };
 
+  // Function to capture image using the camera
   const captureImageWithCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
@@ -55,6 +67,7 @@ const MissingItems = () => {
     }
   };
 
+  // Function to open options for uploading images
   const openImagePickerOptions = () => {
     Alert.alert(
       "Upload Photo",
@@ -68,6 +81,7 @@ const MissingItems = () => {
     );
   };
 
+  // Function to upload missing item to Firebase
   const uploadMissingItem = async () => {
     if (!title.trim() || !photo) {
       Alert.alert(
@@ -81,6 +95,12 @@ const MissingItems = () => {
 
     try {
       setUploading(true);
+
+      // Get details from AsyncStorage
+      const details = await getDetails();
+      if (!details) return;
+      
+      const { schoolID, busID } = details;
 
       // Upload photo to Firebase Storage
       const imageRef = storageRef(storage, `missingItems/${Date.now()}.jpg`);
@@ -100,7 +120,7 @@ const MissingItems = () => {
       };
 
       // Construct the dynamic path
-      const path = `schools/${schoolID}/buses/${busID}/trips/${tripID}/missingItemNotification`;
+      const path = `schools/${schoolID}/buses/${busID}/missingItemNotification`;
 
       // Get the current data to check the last uploaded number (if any)
       const snapshot = await get(ref(database, path));
@@ -132,10 +152,8 @@ const MissingItems = () => {
   return (
     <View style={tw`flex-1 bg-white`}>
       {/* Header */}
-      <View
-        style={[tw`pb-2 px-4 flex-row items-center pt-9`, { height: 75, backgroundColor: "#FCD32D" }]}
-      >
-        <TouchableOpacity onPress={() => { router.back(); }}>
+      <View style={[tw`pb-2 px-4 flex-row items-center pt-9`, { height: 75, backgroundColor: "#FCD32D" }]}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text style={tw`text-xl font-bold text-black ml-2`}>Report Missing Item</Text>
@@ -143,7 +161,7 @@ const MissingItems = () => {
 
       {/* Content */}
       <View style={tw`flex-1 p-5`}>
-        {/* Title */}
+        {/* Title Input */}
         <Text style={tw`text-lg font-bold mb-2`}>Title:</Text>
         <TextInput
           style={tw`border border-gray-300 rounded-lg p-3 mb-4`}
@@ -168,9 +186,7 @@ const MissingItems = () => {
           {photo ? (
             <Image source={{ uri: photo }} style={tw`w-full h-48 rounded-lg mb-4`} />
           ) : (
-            <View
-              style={tw`w-full h-48 border border-dashed border-gray-300 rounded-lg items-center justify-center`}
-            >
+            <View style={tw`w-full h-48 border border-dashed border-gray-300 rounded-lg items-center justify-center`}>
               <FontAwesome name="photo" size={50} color="#ccc" />
               <Text style={tw`mt-2 text-gray-500`}>Tap to upload photo</Text>
             </View>
@@ -183,9 +199,7 @@ const MissingItems = () => {
           onPress={uploadMissingItem}
           disabled={uploading}
         >
-          <Text style={tw`text-black font-bold`}>
-            {uploading ? "Uploading..." : "Upload Item"}
-          </Text>
+          <Text style={tw`text-black font-bold`}>{uploading ? "Uploading..." : "Upload Item"}</Text>
         </TouchableOpacity>
       </View>
     </View>
