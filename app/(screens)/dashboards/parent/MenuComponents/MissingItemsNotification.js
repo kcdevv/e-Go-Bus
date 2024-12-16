@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, Image, ScrollView, ActivityIndicator } from "react-native";
 import CallDriverButton from "../../../../components/CallDriverButton";
 import tw from "tailwind-react-native-classnames";
-import { ref, onValue } from "firebase/database";
+import { ref, onValue, remove } from "firebase/database";
 import { database } from '../../../../../firebase.config';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -23,7 +23,6 @@ const MissingItemsNotification = () => {
         const storedTripID = await AsyncStorage.getItem('tripID');
         const storedDriverID = await AsyncStorage.getItem('driverID');
 
-        // Handle cases where AsyncStorage returns null
         setSchoolID(storedSchoolID ? storedSchoolID.replace(/['"]+/g, '') : null);
         setBusID(storedBusID ? storedBusID.replace(/['"]+/g, '') : null);
         setTripID(storedTripID ? storedTripID.replace(/['"]+/g, '') : null);
@@ -36,13 +35,35 @@ const MissingItemsNotification = () => {
     loadAsyncStorageValues();
   }, []);
 
+  const cleanOldItems = async () => {
+    if (!schoolID || !busID) return;
+
+    const missingItemRef = ref(database, `schools/${schoolID}/buses/${busID}/missingItemNotification`);
+    const twelveDaysAgo = Date.now() - 12 * 24 * 60 * 60 * 1000; // Timestamp 12 days ago
+
+    onValue(missingItemRef, (snapshot) => {
+      const data = snapshot?.val();
+      if (!data) return;
+
+      Object.keys(data)?.forEach((key) => {
+        const item = data[key];
+        if (item?.date && new Date(item.date).getTime() < twelveDaysAgo) {
+          // Remove outdated item
+          remove(ref(database, `schools/${schoolID}/buses/${busID}/missingItemNotification/${key}`))
+            .then(() => console.log(`✅ Deleted old item with key: ${key}`))
+            .catch((error) => console.error(`❌ Error deleting item ${key}:`, error));
+        }
+      });
+    }, { onlyOnce: true });
+  };
+
   useEffect(() => {
     if (!schoolID || !busID || !tripID) return;
 
     const busRef = ref(database, `schools/${schoolID}/buses/${busID}`);
-    const missingItemRef = ref(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/missingItemNotification`);
+    const missingItemRef = ref(database, `schools/${schoolID}/buses/${busID}/missingItemNotification`);
 
-    const unsubscribeBus = onValue(busRef, (snapshot) => { 
+    const unsubscribeBus = onValue(busRef, (snapshot) => {
       const busData = snapshot.val();
       setDriverMobile(busData?.driverMobile || '');
     });
@@ -50,12 +71,16 @@ const MissingItemsNotification = () => {
     const unsubscribeItems = onValue(missingItemRef, (snapshot) => {
       const data = snapshot.val();
       const formattedData = data ? Object.keys(data).map((key) => ({
-        id: key, 
+        id: key,
         ...data[key],
       })) : [];
 
+      formattedData.reverse();
       setItems(formattedData);
       setLoading(false);
+
+      // Clean old items whenever data updates
+      cleanOldItems();
     });
 
     return () => {

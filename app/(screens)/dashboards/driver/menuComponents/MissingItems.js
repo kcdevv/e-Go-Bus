@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Image, Alert } from "react-nat
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
-import { push, ref, get } from "firebase/database";
+import { push, ref, get, set } from "firebase/database";
 import { storage, database } from "../../../../../firebase.config";
 import tw from "tailwind-react-native-classnames";
 import { useRouter } from "expo-router";
@@ -81,7 +81,6 @@ const MissingItems = () => {
     );
   };
 
-  // Function to upload missing item to Firebase
   const uploadMissingItem = async () => {
     if (!title.trim() || !photo) {
       Alert.alert(
@@ -92,25 +91,25 @@ const MissingItems = () => {
       );
       return;
     }
-
+  
     try {
       setUploading(true);
-
+  
       // Get details from AsyncStorage
       const details = await getDetails();
       if (!details) return;
-      
+  
       const { schoolID, busID } = details;
-
+  
       // Upload photo to Firebase Storage
       const imageRef = storageRef(storage, `missingItems/${Date.now()}.jpg`);
       const response = await fetch(photo);
       const blob = await response.blob();
       await uploadBytes(imageRef, blob);
-
+  
       // Get the uploaded image's URL
       const photoURL = await getDownloadURL(imageRef);
-
+  
       // Prepare the missing item data
       const newItem = {
         title,
@@ -118,25 +117,33 @@ const MissingItems = () => {
         image: photoURL,
         date: new Date().toISOString(),
       };
-
+  
       // Construct the dynamic path
       const path = `schools/${schoolID}/buses/${busID}/missingItemNotification`;
-
+  
       // Get the current data to check the last uploaded number (if any)
       const snapshot = await get(ref(database, path));
       const currentData = snapshot.val();
-
+  
       // Calculate the next number (based on existing data)
       const itemCount = currentData ? Object.keys(currentData).length + 1 : 1;
-
+  
       // Create a new item with the incremented number as the key
       await push(ref(database, path), {
         ...newItem,
         number: itemCount, // Add a "number" field for the unique number
       });
-
+  
+      // Increment the missingItemsCount manually
+      const schoolCountRef = ref(database, `schools/${schoolID}/missingItemsCount`);
+      const countSnapshot = await get(schoolCountRef);
+      const currentCount = countSnapshot.val() || 0;
+  
+      // Update the count
+      await set(schoolCountRef, currentCount + 1);
+  
       Alert.alert("Item Uploaded", `The item "${title}" has been successfully uploaded.`);
-
+  
       // Reset the form
       setTitle("Lost Item Found");
       setMessage("A missing item was found on the bus. Please check and respond.");
@@ -148,6 +155,8 @@ const MissingItems = () => {
       setUploading(false);
     }
   };
+  
+
 
   return (
     <View style={tw`flex-1 bg-white`}>
