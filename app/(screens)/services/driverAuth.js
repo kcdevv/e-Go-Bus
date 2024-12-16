@@ -1,28 +1,27 @@
-import { database } from '../../../firebase.config'; // Ensure this path is correct
-import { ref as dbRef, get } from 'firebase/database';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-const getPickupPointsData = async () => {
+import { database } from "../../../firebase.config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ref as dbRef, get } from "firebase/database";
+
+export const countTripsAndStore = async (schoolID, busID) => {
   try {
-    // Retrieve stored IDs from AsyncStorage
-    const schoolID = await AsyncStorage.getItem('schoolID');
-    const busID = await AsyncStorage.getItem('busID');
-    const tripID = await AsyncStorage.getItem('tripID');
-    if (!schoolID || !busID || !tripID) {
-      throw new Error('Missing data in AsyncStorage');
-    }
-    // Reference to the pickupPoints in the database
-    const pickupPointsRef = dbRef(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints`);
-    // Fetch data from Firebase Realtime Database
-    const snapshot = await get(pickupPointsRef);
-    if (snapshot.exists()) {
-      console.log(snapshot.val());
-      return snapshot.val(); 
+    // Reference to the trips node
+    const tripsRef = dbRef(database, `schools/${schoolID}/buses/${busID}/trips`);
+    
+    // Fetch data from Firebase
+    const tripsSnapshot = await get(tripsRef);
+    
+    if (tripsSnapshot.exists()) {
+      // Count the number of trips
+      const noOfTrips = Object.keys(tripsSnapshot.val()).length;
+
+      // Store the count in AsyncStorage
+      await AsyncStorage.setItem("noOfTrips", JSON.stringify(noOfTrips));
+      console.log(`Trips count (${noOfTrips}) stored successfully.`);
     } else {
-      throw new Error('No pickup points found for this trip');
+      console.log("No trips found for the given schoolID and busID.");
     }
   } catch (error) {
-    console.error("Error fetching pickup points:", error);
-    throw error; // Optionally, handle this error in the component
+    console.error("Error counting trips or storing in AsyncStorage:", error);
   }
 };
-export { getPickupPointsData };
+

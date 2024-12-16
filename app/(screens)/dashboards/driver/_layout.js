@@ -15,12 +15,12 @@ const DriverLayout = () => {
         const driverID = await AsyncStorage.getItem("driverID");
         const isManagement = await AsyncStorage.getItem("isManagement") === "true";
 
-        console.log("SchoolID:", schoolID);
-        console.log("BusID:", busID);
-        console.log("TripID:", tripID);
-        console.log("StudentID:", studentID);
-        console.log("DriverID:", driverID);
-        console.log("IsManagement:", isManagement);
+        // console.log("SchoolID:", schoolID);
+        // console.log("BusID:", busID);
+        // console.log("TripID:", tripID);
+        // console.log("StudentID:", studentID);
+        // console.log("DriverID:", driverID);
+        // console.log("IsManagement:", isManagement);
       } catch (error) {
         console.error("Error fetching async storage data:", error);
       }

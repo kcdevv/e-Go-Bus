@@ -5,19 +5,22 @@ import { ref, set, serverTimestamp, get } from "firebase/database";
 // Load stored data from AsyncStorage
 export const loadStoredData = async () => {
   try {
-    const [storedBusId, storedSchoolId, storedDriverId, storedTripNumber] = await Promise.all([
+    const [storedBusId, storedSchoolId, storedDriverId, noOfTripsStr] = await Promise.all([
       AsyncStorage.getItem("busID"),
       AsyncStorage.getItem("schoolID"),
       AsyncStorage.getItem("driverID"),
-      AsyncStorage.getItem("tripID"),
+      AsyncStorage.getItem("noOfTrips"),  // Get the stored value directly
     ]);
 
-    if (storedBusId && storedSchoolId && storedDriverId && storedTripNumber) {
+    // Safely parse `noOfTrips` only if it's valid
+    const noOfTrips = noOfTripsStr ? JSON.parse(noOfTripsStr) : 0;
+
+    if (storedBusId && storedSchoolId && storedDriverId && noOfTrips !== null) {
       return {
         busId: storedBusId,
         schoolId: storedSchoolId,
         driverId: storedDriverId,
-        tripNumber: storedTripNumber,
+        noOfTrips: noOfTrips,
       };
     }
     return null;
@@ -27,21 +30,34 @@ export const loadStoredData = async () => {
   }
 };
 
+
 // Request and retrieve location asynchronously
 export const getLocationAsync = async () => {
   try {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      throw new Error("Location permission not granted");
+    // Request foreground permissions
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    if (foregroundStatus !== "granted") {
+      throw new Error("Foreground location permission not granted");
     }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Highest,
-      timeout: 5000,
-      maximumAge: 1000,
-    });
+    // Request background permissions
+    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    if (backgroundStatus !== "granted") {
+      throw new Error("Background location permission not granted");
+    }
 
-    return location;
+    // Both permissions granted, retrieve current location
+    if (foregroundStatus === "granted" && backgroundStatus === "granted") {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+        timeout: 5000,
+        maximumAge: 1000,
+      });
+
+      return location;
+    } else {
+      throw new Error("Required permissions not granted");
+    }
   } catch (error) {
     console.error("Error getting location:", error);
     throw error;
@@ -50,11 +66,11 @@ export const getLocationAsync = async () => {
 
 // Update Firebase with location data
 export const updateFirebaseData = async (database, data) => {
-  const { busId, schoolId, driverId, tripNumber, location, heading } = data;
+  const { busId, schoolId, tripId, location, heading } = data;
 
-  if (!busId || !schoolId || !tripNumber || !location) {
+  if (!busId || !schoolId || !tripId || !location) {
     console.warn("Missing required parameters for Firebase update:", {
-      busId, schoolId, tripNumber, location,
+      busId, schoolId, tripId, location,
     });
     return;
   }
@@ -62,7 +78,7 @@ export const updateFirebaseData = async (database, data) => {
   try {
     const locationRef = ref(
       database,
-      `schools/${schoolId}/buses/${busId}/trips/${tripNumber}/location`
+      `schools/${schoolId}/buses/${busId}/trips/${tripId}/location`
     );
 
     const locationData = {
