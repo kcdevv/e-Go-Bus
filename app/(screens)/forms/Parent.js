@@ -57,7 +57,7 @@ const Parent = () => {
 
           for (const key of keys) {
             const value = await AsyncStorage.getItem(key);
-            console.log(`Key: ${key}, Value: ${value}`);
+            
           }
 
           navigation.reset({
