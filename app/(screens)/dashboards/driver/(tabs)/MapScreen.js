@@ -1,14 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { StyleSheet, Alert, Animated, View, Text, Image, TouchableOpacity } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
-import { Magnetometer } from "expo-sensors";
-import * as Location from "expo-location"; // Added Location import
+import * as Location from "expo-location";
 import { database } from "../../../../../firebase.config";
 import { loadStoredData, getLocationAsync } from "../services/locationService";
 import Loader from "../../../../components/Loader";
-import { calculateHeading, rotateMarker, updateFirebase } from "../utils/locationUtils";
+import { rotateMarker, updateFirebase } from "../utils/locationUtils";
 import tw from "tailwind-react-native-classnames";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import polyline from '@mapbox/polyline';
 import Constants from "expo-constants";
 import { getPickupPointsData } from '../utils/getPickUpPoints'
@@ -16,8 +14,7 @@ import TripSelectionComponent from '../utils/TripSelectionComponent';
 
 const MapScreen = () => {
     const [userLocation, setUserLocation] = useState(null);
-    const [magnetometerData, setMagnetometerData] = useState({ x: 0, y: 0, z: 0 });
-    const [heading, setHeading] = useState(null);
+    const [heading, setHeading] = useState(0);
     const [tripEnabled, setTripEnabled] = useState(false);
     const [tripDetails, setTripDetails] = useState(null);
     const [tripSelected, setTripSelected] = useState(null);
@@ -28,6 +25,8 @@ const MapScreen = () => {
     const mapRef = useRef(null);
     const locationIntervalRef = useRef(null);
     const watchPositionRef = useRef(null);
+    const lastFirebaseUpdateRef = useRef(0);
+    const lastHeadingRef = useRef(0);
 
     // Fetch and store pick up points
     const storePickupPoints = useCallback(async ({ tripID }) => {
@@ -50,7 +49,6 @@ const MapScreen = () => {
         }
     }, []);
 
-
     // store schoolId, busId, no.of.trips for the bus
     useEffect(() => {
         const loadTripData = async () => {
@@ -69,17 +67,34 @@ const MapScreen = () => {
                 {
                     text: "Yes, End Trip",
                     onPress: async () => {
-                        // Ensure the watcher exists before attempting to remove it
-                        if (watchPositionRef.current) {
-                            try {
-                                // Remove the location watch subscription
-                                watchPositionRef.current.remove();
-                                console.log("Location watching stopped");
-                            } catch (error) {
-                                console.error("Error stopping location watch:", error);
+                        try {
+                            // Stop location watching
+                            if (watchPositionRef.current) {
+                                await watchPositionRef.current.remove();
+                                watchPositionRef.current = null;
                             }
+
+                            // Clear update interval
+                            if (locationIntervalRef.current) {
+                                clearInterval(locationIntervalRef.current);
+                                locationIntervalRef.current = null;
+                            }
+
+                            // Reset all location-related state
+                            setUserLocation(null);
+                            setHeading(0);
+                            setDirections([]);
+                            lastHeadingRef.current = 0;
+                            lastFirebaseUpdateRef.current = 0;
+
+                            // Finally disable the trip
+                            setTripEnabled(false);
+                            
+                            console.log("Trip ended and all tracking stopped");
+                        } catch (error) {
+                            console.error("Error stopping trip:", error);
+                            Alert.alert("Error", "Failed to properly end trip");
                         }
-                        setTripEnabled(false); // Disable trip
                     }
                 },
             ]
@@ -88,10 +103,10 @@ const MapScreen = () => {
 
     // Fetch the user's location
     const fetchUserLocation = useCallback(async () => {
-        // console.log('line 91')
+        if (!tripEnabled) return;
+        
         try {
             const location = await getLocationAsync();
-            // console.log('location 94: ', location)
             const updatedLocation = {
                 latitude: location.coords.latitude,
                 longitude: location.coords.longitude,
@@ -99,6 +114,29 @@ const MapScreen = () => {
                 longitudeDelta: 0.01,
             };
             setUserLocation(updatedLocation);
+
+            // Update heading from location
+            if (location.coords.heading !== null) {
+                setHeading(location.coords.heading);
+                lastHeadingRef.current = location.coords.heading;
+                rotateMarker(rotationValue, location.coords.heading);
+            } else {
+                setHeading(lastHeadingRef.current);
+            }
+
+            // Update Firebase with location and heading
+            const now = Date.now();
+            if (now - lastFirebaseUpdateRef.current >= 2000) {
+                await updateFirebase(
+                    database,
+                    tripDetails?.busId,
+                    tripDetails?.schoolId,
+                    tripSelected,
+                    location,
+                    lastHeadingRef.current
+                );
+                lastFirebaseUpdateRef.current = now;
+            }
 
             // Animate map to follow the user
             if (mapRef.current) {
@@ -109,10 +147,12 @@ const MapScreen = () => {
             console.error("Failed to fetch location:", error);
             throw error;
         }
-    }, []);
+    }, [tripEnabled, tripDetails, tripSelected]);
 
-    // Fetch directions from user location to first pickup point
+    // Fetch directions from user location to a pickup point
     const fetchDirections = useCallback(async (origin, destination) => {
+        if (!origin || !destination) return;
+        
         try {
             const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin?.latitude},${origin?.longitude}&destination=${destination?.latitude},${destination?.longitude}&key=${Constants.expoConfig.android.config.googleMaps.apiKey}`);
             const data = await response.json();
@@ -155,46 +195,11 @@ const MapScreen = () => {
         if (!tripEnabled || !tripDetails) return;
         try {
             const location = await fetchUserLocation();
-            if (!magnetometerData || magnetometerData.x === undefined || magnetometerData.y === undefined) {
-                console.warn("Magnetometer data not yet available");
-                return;
-            }
 
-            // Use device heading if available, fallback to magnetometer
-            let currentHeading;
-            if (location.coords.heading !== null && location.coords.heading !== undefined) {
-                currentHeading = location.coords.heading;
-            } else {
-                currentHeading = calculateHeading(magnetometerData);
-            }
-
-            if (currentHeading === null) {
-                console.warn("Invalid heading value. Skipping Firebase update.");
-                return;
-            }
-
-            setHeading(currentHeading);
-            rotateMarker(rotationValue, currentHeading + 90); // Add 90 degrees to correct orientation
-
-            // Update Firebase with location and heading
-            await updateFirebase(
-                database,
-                tripDetails?.busId,
-                tripDetails?.schoolId,
-                tripSelected,
-                location,
-                currentHeading
-            );
-
-            console.log('firebase updated 1')
-
-            // Fetch directions to the first pickup point
-            if (pickupPoints && pickupPoints?.length > 0) {
-                await fetchDirections(location?.coords, pickupPoints[0]);
-
-                // Check if user is near the first pickup point
-                const distance = getDistance(location?.coords, pickupPoints[0]);
-                if (distance <= 50) {
+            // Check if user is near the current pickup point
+            if (pickupPoints && pickupPoints.length > 0 && location?.coords) {
+                const distance = getDistance(location.coords, pickupPoints[0]);
+                if (distance <= 20) {
                     setShowPickupConfirmation(true);
                 }
             }
@@ -202,93 +207,87 @@ const MapScreen = () => {
         } catch (error) {
             Alert.alert("Update Error", error.message);
         }
-    }, [fetchUserLocation, magnetometerData, tripEnabled, tripDetails, pickupPoints, fetchDirections]);
+    }, [fetchUserLocation, tripEnabled, tripDetails, pickupPoints]);
 
+    // Effect to update directions when userLocation or pickupPoints change
+    useEffect(() => {
+        if (userLocation && pickupPoints && pickupPoints.length > 0) {
+            fetchDirections(userLocation, pickupPoints[0]);
+        }
+    }, [userLocation, pickupPoints, fetchDirections]);
 
     // Initialize trip data and set up location tracking
     useEffect(() => {
-        if (tripEnabled) {
-            let locationInterval;
-            const initializeTracking = async () => {
-                try {
-                    if (!tripSelected) return;
+        let locationInterval;
+        let watchPosition;
 
-                    await storePickupPoints({ tripID: tripSelected });
-                    
-                    if (!pickupPoints) {
-                      return <Loader text="Fetching Location" />;
-                    }
-                    // Set up high accuracy location watching
-                    const { status } = await Location.requestForegroundPermissionsAsync();
-                    if (status === 'granted') {
-                        watchPositionRef.current = await Location.watchPositionAsync(
-                            {
-                                accuracy: Location.Accuracy.BestForNavigation,
-                                distanceInterval: 20, // Update every 20 meter
-                                timeInterval: 1000, // Update every second
-                            },
-                            async (location) => {
-                                // console.log('location 229 : ', location);
-                                const updatedLocation = {
-                                    latitude: location?.coords?.latitude,
-                                    longitude: location?.coords?.longitude,
-                                    latitudeDelta: 0.01,
-                                    longitudeDelta: 0.01,
-                                };
-                                setUserLocation(updatedLocation);
+        const initializeTracking = async () => {
+            // Only initialize if trip is enabled and we have a selected trip
+            if (!tripEnabled || !tripSelected) {
+                return;
+            }
 
-                                // Update heading from GPS if available
-                                if (location.coords.heading !== null) {
-                                    setHeading(location.coords.heading);
-                                    rotateMarker(rotationValue, location.coords.heading + 90);
-
-                                    // Update Firebase when location changes
-                                    if (tripDetails) {
-                                        await updateFirebase(
-                                            database,
-                                            tripDetails.busId,
-                                            tripDetails.schoolId,
-                                            tripDetails.driverId,
-                                            tripSelected,
-                                            location,
-                                            heading
-                                        );
-                                        console.log('firebase updated')
-                                    }
-                                }
+            try {
+                await storePickupPoints({ tripID: tripSelected });
+                
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                    watchPosition = await Location.watchPositionAsync(
+                        {
+                            accuracy: Location.Accuracy.BestForNavigation,
+                            distanceInterval: 20,
+                            timeInterval: 1000,
+                        },
+                        async (location) => {
+                            // Double check trip is still enabled before processing location
+                            if (!tripEnabled) {
+                                return;
                             }
-                        );
-                    }
 
-                    locationInterval = setInterval(handleUpdates, 1000);
+                            const updatedLocation = {
+                                latitude: location?.coords?.latitude,
+                                longitude: location?.coords?.longitude,
+                                latitudeDelta: 0.01,
+                                longitudeDelta: 0.01,
+                            };
+                            setUserLocation(updatedLocation);
+
+                            if (location.coords.heading !== null) {
+                                lastHeadingRef.current = location.coords.heading;
+                                setHeading(location.coords.heading);
+                                rotateMarker(rotationValue, location.coords.heading);
+                            }
+                        }
+                    );
+                    watchPositionRef.current = watchPosition;
+
+                    locationInterval = setInterval(handleUpdates, 2000);
                     locationIntervalRef.current = locationInterval;
-                } catch (error) {
-                    console.error('Tracking initialization error:', error);
                 }
-            };
+            } catch (error) {
+                console.error('Tracking initialization error:', error);
+                Alert.alert("Error", "Failed to initialize location tracking");
+            }
+        };
 
+        // Start tracking when trip is enabled
+        if (tripEnabled) {
             initializeTracking();
-
-            return () => {
-                if (locationIntervalRef.current) {
-                    clearInterval(locationIntervalRef.current);
-                    locationIntervalRef.current = null;
-                }
-                if (watchPositionRef.current) {
-                    watchPositionRef.current.remove();
-                }
-                Magnetometer.removeAllListeners();
-            };
         }
-    }, [handleUpdates, tripEnabled]);
 
-
-    // Magnetometer heading listener
-    useEffect(() => {
-        Magnetometer.setUpdateInterval(100); // Increased frequency
-        const headingListener = Magnetometer.addListener((data) => setMagnetometerData(data));
-        return () => headingListener.remove();
-    }, []);
+        // Cleanup function
+        return () => {
+            if (locationInterval) {
+                clearInterval(locationInterval);
+            }
+            if (watchPosition) {
+                watchPosition.remove();
+            }
+            // Reset refs
+            locationIntervalRef.current = null;
+            watchPositionRef.current = null;
+        };
+    }, [tripEnabled, tripSelected]);
 
     // Interpolate rotation for marker
     const rotate = rotationValue.interpolate({
@@ -296,7 +295,7 @@ const MapScreen = () => {
         outputRange: ["0deg", "360deg"],
     });
 
-    // // Render early return if trip is not enabled
+    // Render early return if trip is not enabled
     if (!tripEnabled) {
         return (
             <TripSelectionComponent
@@ -318,7 +317,14 @@ const MapScreen = () => {
     const handlePickupConfirmation = (confirmed) => {
         if (confirmed) {
             // Move to the next pickup point
-            setPickupPoints(prevPoints => prevPoints.slice(1));
+            setPickupPoints(prevPoints => {
+                const remainingPoints = prevPoints.slice(1);
+                if (remainingPoints.length === 0) {
+                    // End the trip if all pickup points are completed
+                    handleEndTrip();
+                }
+                return remainingPoints;
+            });
         }
         setShowPickupConfirmation(false);
     };

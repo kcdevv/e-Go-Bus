@@ -28,8 +28,8 @@ export const rotateMarker = (rotationValue, currentHeading) => {
 };
 
 // Function to update Firebase with location and heading
-export const updateFirebase = async (database, busId, schoolId, driverId, tripNumber, location, currentHeading) => {
-  if (!busId || !schoolId || !tripNumber) {
+export const updateFirebase = async (database, busId, schoolId, tripId, location, currentHeading) => {
+  if (!busId || !schoolId || !tripId) {
     console.warn("Missing trip details for Firebase update");
     return;
   }
@@ -38,8 +38,7 @@ export const updateFirebase = async (database, busId, schoolId, driverId, tripNu
     await updateFirebaseData(database, {
       busId,
       schoolId,
-      driverId,
-      tripNumber,
+      tripId,
       location,
       heading: currentHeading,
     });

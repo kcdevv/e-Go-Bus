@@ -70,7 +70,7 @@ export const updateFirebaseData = async (database, data) => {
 
   if (!busId || !schoolId || !tripId || !location) {
     console.warn("Missing required parameters for Firebase update:", {
-      busId, schoolId, tripId, location,
+      busId, schoolId, tripId, location
     });
     return;
   }
@@ -93,7 +93,7 @@ export const updateFirebaseData = async (database, data) => {
     const snapshot = await get(locationRef);
     if (!snapshot.exists() || JSON.stringify(snapshot.val()) !== JSON.stringify(locationData)) {
       await set(locationRef, locationData);
-      console.log("Location successfully updated in Firebase.");
+      console.log("Location successfully updated in Firebase");
     }
   } catch (error) {
     console.error("Error updating Firebase location:", error);
