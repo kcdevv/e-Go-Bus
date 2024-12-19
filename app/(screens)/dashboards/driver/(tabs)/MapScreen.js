@@ -12,6 +12,19 @@ import Constants from "expo-constants";
 import { getPickupPointsData } from '../utils/getPickUpPoints'
 import TripSelectionComponent from '../utils/TripSelectionComponent';
 
+const PickupConfirmationOverlay = ({ onDone }) => {
+    return (
+        <View style={styles.overlayContainer}>
+            <View style={styles.overlayContent}>
+                <Text style={styles.overlayText}>You have reached the pickup point</Text>
+                <TouchableOpacity style={styles.doneButton} onPress={onDone}>
+                    <Text style={styles.doneButtonText}>Done</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+};
+
 const MapScreen = () => {
     const [userLocation, setUserLocation] = useState(null);
     const [heading, setHeading] = useState(0);
@@ -28,26 +41,38 @@ const MapScreen = () => {
     const watchPositionRef = useRef(null);
     const lastFirebaseUpdateRef = useRef(0);
     const lastHeadingRef = useRef(0);
+    const pickupPointsFetchedRef = useRef(false);
 
     // Fetch and store pick up points
     const storePickupPoints = useCallback(async ({ tripID }) => {
         try {
-            const pickupPoints = await getPickupPointsData(tripID);
-            const pickupLocations = pickupPoints.map(point => point?.pickupLocation);
-            if (pickupLocations.length > 0) {
-                const points = pickupLocations.map(location => {
-                    const [latitude, longitude] = location.split(',').map(Number);
-                    return { latitude, longitude };
-                });
-                setPickupPoints(points);
-                setCurrentPickupIndex(0);
-            } else {
-                console.warn("No pickup locations available for this trip");
+            // Only fetch if not already fetched for this trip
+            if (!pickupPointsFetchedRef.current) {
+                const pickupPoints = await getPickupPointsData(tripID);
+                const pickupLocations = pickupPoints.map(point => point?.pickupLocation);
+                if (pickupLocations.length > 0) {
+                    const points = pickupLocations.map(location => {
+                        const [latitude, longitude] = location.split(',').map(Number);
+                        return { latitude, longitude };
+                    });
+                    setPickupPoints(points);
+                    setCurrentPickupIndex(0);
+                    pickupPointsFetchedRef.current = true;
+                } else {
+                    console.warn("No pickup locations available for this trip");
+                }
             }
         } catch (error) {
             console.error("Error fetching pickup points from AsyncStorage:", error);
         }
     }, []);
+
+    // Reset pickup points fetch flag when trip is disabled
+    useEffect(() => {
+        if (!tripEnabled) {
+            pickupPointsFetchedRef.current = false;
+        }
+    }, [tripEnabled]);
 
     // store schoolId, busId, no.of.trips for the bus
     useEffect(() => {
@@ -83,6 +108,7 @@ const MapScreen = () => {
                             lastHeadingRef.current = 0;
                             lastFirebaseUpdateRef.current = 0;
                             setTripEnabled(false);
+                            pickupPointsFetchedRef.current = false;
                             console.log("Trip ended and all tracking stopped");
                         } catch (error) {
                             console.error("Error stopping trip:", error);
@@ -177,19 +203,21 @@ const MapScreen = () => {
     }, []);
 
     const getDistance = (coord1, coord2) => {
-        const R = 6371e3; // metres
-        const φ1 = coord1.latitude * Math.PI/180;
-        const φ2 = coord2.latitude * Math.PI/180;
-        const Δφ = (coord2.latitude-coord1.latitude) * Math.PI/180;
-        const Δλ = (coord2.longitude-coord1.longitude) * Math.PI/180;
-    
-        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+        if (!coord1 || !coord2) return Infinity;
+
+        const R = 6371e3; // Earth's radius in meters
+        const φ1 = (coord1.latitude * Math.PI) / 180;
+        const φ2 = (coord2.latitude * Math.PI) / 180;
+        const Δφ = ((coord2.latitude - coord1.latitude) * Math.PI) / 180;
+        const Δλ = ((coord2.longitude - coord1.longitude) * Math.PI) / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
                   Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    
-        const distance = R * c; // in metres
-        console.log("Distance to destination:", distance, "meters");
+                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+
         return distance;
     };
 
@@ -214,22 +242,11 @@ const MapScreen = () => {
         if (!tripEnabled || !tripDetails) return;
         try {
             const location = await fetchUserLocation();
-
-            if (pickupPoints && pickupPoints.length > currentPickupIndex && location?.coords) {
-                const currentDistance = getDistance(
-                    { latitude: location.coords.latitude, longitude: location.coords.longitude },
-                    pickupPoints[currentPickupIndex]
-                );
-                
-                if (currentDistance <= 20) {
-                    setShowPickupConfirmation(true);
-                }
-            }
-
+            if (!location) return;
         } catch (error) {
             Alert.alert("Update Error", error.message);
         }
-    }, [fetchUserLocation, tripEnabled, tripDetails, pickupPoints, currentPickupIndex, fetchDirections, moveToNextPickupPoint]);
+    }, [fetchUserLocation, tripEnabled, tripDetails]);
 
     const handlePickupConfirmation = () => {
         setShowPickupConfirmation(false);
@@ -259,13 +276,11 @@ const MapScreen = () => {
                     watchPosition = await Location.watchPositionAsync(
                         {
                             accuracy: Location.Accuracy.BestForNavigation,
-                            distanceInterval: 20,
+                            distanceInterval: 10,
                             timeInterval: 1000,
                         },
                         async (location) => {
-                            if (!tripEnabled) {
-                                return;
-                            }
+                            if (!tripEnabled) return;
 
                             const updatedLocation = {
                                 latitude: location?.coords?.latitude,
@@ -275,10 +290,37 @@ const MapScreen = () => {
                             };
                             setUserLocation(updatedLocation);
 
+                            if (pickupPoints && pickupPoints.length > currentPickupIndex) {
+                                const currentDistance = getDistance(
+                                    { 
+                                        latitude: location.coords.latitude, 
+                                        longitude: location.coords.longitude 
+                                    },
+                                    pickupPoints[currentPickupIndex]
+                                );
+                                
+                                if (currentDistance <= 20) {
+                                    setShowPickupConfirmation(true);
+                                }
+                            }
+
                             if (location.coords.heading !== null) {
                                 lastHeadingRef.current = location.coords.heading;
                                 setHeading(location.coords.heading);
                                 rotateMarker(rotationValue, location.coords.heading);
+                            }
+
+                            const now = Date.now();
+                            if (now - lastFirebaseUpdateRef.current >= 2000) {
+                                await updateFirebase(
+                                    database,
+                                    tripDetails?.busId,
+                                    tripDetails?.schoolId,
+                                    tripSelected,
+                                    location,
+                                    lastHeadingRef.current
+                                );
+                                lastFirebaseUpdateRef.current = now;
                             }
                         }
                     );
@@ -307,23 +349,12 @@ const MapScreen = () => {
             locationIntervalRef.current = null;
             watchPositionRef.current = null;
         };
-    }, [tripEnabled, tripSelected]);
+    }, [tripEnabled, tripSelected, pickupPoints, currentPickupIndex]);
 
     const rotate = rotationValue.interpolate({
         inputRange: [0, 360],
         outputRange: ["0deg", "360deg"],
     });
-
-    const renderPickupConfirmation = () => (
-        Alert.alert(
-            "Pickup Confirmation",
-            "Did you reach the pickup point?",
-            [
-                { text: "Yes", onPress: handlePickupConfirmation },
-                { text: "Cancel", onPress: () => setShowPickupConfirmation(false), style: "cancel" }
-            ]
-        )
-    );
 
     if (!tripEnabled) {
         return (
@@ -343,7 +374,9 @@ const MapScreen = () => {
 
     return (
         <View style={tw`flex-1`}>
-            {showPickupConfirmation && renderPickupConfirmation()}
+            {showPickupConfirmation && (
+                <PickupConfirmationOverlay onDone={handlePickupConfirmation} />
+            )}
             <TouchableOpacity onPress={handleEndTrip} style={styles.endTripButton}>
                 <Text style={styles.endTripButtonText}>End Trip</Text>
             </TouchableOpacity>
@@ -359,6 +392,7 @@ const MapScreen = () => {
                 showsUserLocation={false}
                 showsCompass
                 zoomEnabled
+                maxZoomLevel={18}
                 pitchEnabled
                 followsUserLocation
             >
@@ -411,6 +445,39 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         fontSize: 16,
         textAlign: "center",
+    },
+    overlayContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2000,
+    },
+    overlayContent: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    overlayText: {
+        fontSize: 18,
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    doneButton: {
+        backgroundColor: '#4CAF50',
+        paddingVertical: 10,
+        paddingHorizontal: 30,
+        borderRadius: 5,
+    },
+    doneButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
     }
 });
 
