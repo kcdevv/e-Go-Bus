@@ -12,9 +12,11 @@ const getPickupPointsData = async (tripID) => {
     }
     
     const pickupPointsRef = dbRef(database, `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints`);
+    console.log(`schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints`);
     const snapshot = await get(pickupPointsRef);
 
     if (snapshot.exists()) {
+      console.log("hello", snapshot.val());
       return snapshot.val();
     } else {
       console.warn("No pickup points found for tripID:", tripID);

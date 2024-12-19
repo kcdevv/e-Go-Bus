@@ -19,6 +19,7 @@ const MapScreen = () => {
     const [tripDetails, setTripDetails] = useState(null);
     const [tripSelected, setTripSelected] = useState(null);
     const [pickupPoints, setPickupPoints] = useState([]);
+    const [currentPickupIndex, setCurrentPickupIndex] = useState(0);
     const [directions, setDirections] = useState([]);
     const [showPickupConfirmation, setShowPickupConfirmation] = useState(false);
     const rotationValue = useRef(new Animated.Value(0)).current;
@@ -31,16 +32,15 @@ const MapScreen = () => {
     // Fetch and store pick up points
     const storePickupPoints = useCallback(async ({ tripID }) => {
         try {
-            // Fetch pickup points data
             const pickupPoints = await getPickupPointsData(tripID);
             const pickupLocations = pickupPoints.map(point => point?.pickupLocation);
-            // Split pickup locations and map them
             if (pickupLocations.length > 0) {
                 const points = pickupLocations.map(location => {
                     const [latitude, longitude] = location.split(',').map(Number);
                     return { latitude, longitude };
                 });
                 setPickupPoints(points);
+                setCurrentPickupIndex(0);
             } else {
                 console.warn("No pickup locations available for this trip");
             }
@@ -68,28 +68,21 @@ const MapScreen = () => {
                     text: "Yes, End Trip",
                     onPress: async () => {
                         try {
-                            // Stop location watching
                             if (watchPositionRef.current) {
                                 await watchPositionRef.current.remove();
                                 watchPositionRef.current = null;
                             }
-
-                            // Clear update interval
                             if (locationIntervalRef.current) {
                                 clearInterval(locationIntervalRef.current);
                                 locationIntervalRef.current = null;
                             }
-
-                            // Reset all location-related state
                             setUserLocation(null);
                             setHeading(0);
                             setDirections([]);
+                            setCurrentPickupIndex(0);
                             lastHeadingRef.current = 0;
                             lastFirebaseUpdateRef.current = 0;
-
-                            // Finally disable the trip
                             setTripEnabled(false);
-                            
                             console.log("Trip ended and all tracking stopped");
                         } catch (error) {
                             console.error("Error stopping trip:", error);
@@ -101,7 +94,6 @@ const MapScreen = () => {
         );
     };
 
-    // Fetch the user's location
     const fetchUserLocation = useCallback(async () => {
         if (!tripEnabled) return;
         
@@ -115,7 +107,6 @@ const MapScreen = () => {
             };
             setUserLocation(updatedLocation);
 
-            // Update heading from location
             if (location.coords.heading !== null) {
                 setHeading(location.coords.heading);
                 lastHeadingRef.current = location.coords.heading;
@@ -124,7 +115,6 @@ const MapScreen = () => {
                 setHeading(lastHeadingRef.current);
             }
 
-            // Update Firebase with location and heading
             const now = Date.now();
             if (now - lastFirebaseUpdateRef.current >= 2000) {
                 await updateFirebase(
@@ -138,7 +128,6 @@ const MapScreen = () => {
                 lastFirebaseUpdateRef.current = now;
             }
 
-            // Animate map to follow the user
             if (mapRef.current) {
                 mapRef.current.animateToRegion(updatedLocation, 2000);
             }
@@ -149,57 +138,90 @@ const MapScreen = () => {
         }
     }, [tripEnabled, tripDetails, tripSelected]);
 
-    // Fetch directions from user location to a pickup point
     const fetchDirections = useCallback(async (origin, destination) => {
-        if (!origin || !destination) return;
+        if (!origin || !destination) {
+            console.log("Missing origin or destination coordinates");
+            return;
+        }
         
         try {
-            const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin?.latitude},${origin?.longitude}&destination=${destination?.latitude},${destination?.longitude}&key=${Constants.expoConfig.android.config.googleMaps.apiKey}`);
+            const apiKey = Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
+            if (!apiKey) {
+                console.error("Google Maps API key is missing");
+                return;
+            }
+
+            const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${apiKey}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
-            if (data.routes.length) {
+            if (data.status === 'OK' && data.routes.length) {
                 const points = polyline.decode(data.routes[0].overview_polyline.points);
                 const coords = points.map(point => ({
                     latitude: point[0],
-                    longitude: point[1]
+                    longitude: point[1],
                 }));
                 setDirections(coords);
+            } else {
+                console.warn("No routes found in directions response:", data.status);
+                setDirections([]);
             }
         } catch (error) {
             console.error("Failed to fetch directions:", error);
+            setDirections([]);
         }
     }, []);
 
-    // Function to calculate distance between two coordinates
     const getDistance = (coord1, coord2) => {
-        const EARTH_RADIUS_METERS = 6371e3; // Earth's radius in meters
-
-        // Convert latitude and longitude from degrees to radians
-        const lat1Radians = coord1.latitude * Math.PI / 180;
-        const lat2Radians = coord2.latitude * Math.PI / 180;
-        const deltaLatRadians = (coord2.latitude - coord1.latitude) * Math.PI / 180;
-        const deltaLonRadians = (coord2.longitude - coord1.longitude) * Math.PI / 180;
-
-        // Apply the Haversine formula
-        const a = Math.sin(deltaLatRadians / 2) * Math.sin(deltaLatRadians / 2) +
-            Math.cos(lat1Radians) * Math.cos(lat2Radians) *
-            Math.sin(deltaLonRadians / 2) * Math.sin(deltaLonRadians / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-        // Calculate the distance
-        const distance = EARTH_RADIUS_METERS * c; // Distance in meters
+        const R = 6371e3; // metres
+        const φ1 = coord1.latitude * Math.PI/180;
+        const φ2 = coord2.latitude * Math.PI/180;
+        const Δφ = (coord2.latitude-coord1.latitude) * Math.PI/180;
+        const Δλ = (coord2.longitude-coord1.longitude) * Math.PI/180;
+    
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    
+        const distance = R * c; // in metres
+        console.log("Distance to destination:", distance, "meters");
         return distance;
     };
 
-    // Master function to handle all updates
+    const moveToNextPickupPoint = useCallback(() => {
+        setCurrentPickupIndex(prevIndex => {
+            const nextIndex = prevIndex + 1;
+            if (nextIndex >= pickupPoints.length) {
+                handleEndTrip();
+                return prevIndex;
+            }
+            console.log("Moving to next pickup point:", pickupPoints[nextIndex]);
+            
+            if (userLocation) {
+                fetchDirections(userLocation, pickupPoints[nextIndex]);
+            }
+            
+            return nextIndex;
+        });
+    }, [pickupPoints, userLocation, fetchDirections]);
+
     const handleUpdates = useCallback(async () => {
         if (!tripEnabled || !tripDetails) return;
         try {
             const location = await fetchUserLocation();
 
-            // Check if user is near the current pickup point
-            if (pickupPoints && pickupPoints.length > 0 && location?.coords) {
-                const distance = getDistance(location.coords, pickupPoints[0]);
-                if (distance <= 20) {
+            if (pickupPoints && pickupPoints.length > currentPickupIndex && location?.coords) {
+                const currentDistance = getDistance(
+                    { latitude: location.coords.latitude, longitude: location.coords.longitude },
+                    pickupPoints[currentPickupIndex]
+                );
+                
+                if (currentDistance <= 20) {
                     setShowPickupConfirmation(true);
                 }
             }
@@ -207,22 +229,24 @@ const MapScreen = () => {
         } catch (error) {
             Alert.alert("Update Error", error.message);
         }
-    }, [fetchUserLocation, tripEnabled, tripDetails, pickupPoints]);
+    }, [fetchUserLocation, tripEnabled, tripDetails, pickupPoints, currentPickupIndex, fetchDirections, moveToNextPickupPoint]);
 
-    // Effect to update directions when userLocation or pickupPoints change
+    const handlePickupConfirmation = () => {
+        setShowPickupConfirmation(false);
+        moveToNextPickupPoint();
+    };
+
     useEffect(() => {
-        if (userLocation && pickupPoints && pickupPoints.length > 0) {
-            fetchDirections(userLocation, pickupPoints[0]);
+        if (userLocation && pickupPoints && pickupPoints.length > currentPickupIndex) {
+            fetchDirections(userLocation, pickupPoints[currentPickupIndex]);
         }
-    }, [userLocation, pickupPoints, fetchDirections]);
+    }, [userLocation, pickupPoints, currentPickupIndex, fetchDirections]);
 
-    // Initialize trip data and set up location tracking
     useEffect(() => {
         let locationInterval;
         let watchPosition;
 
         const initializeTracking = async () => {
-            // Only initialize if trip is enabled and we have a selected trip
             if (!tripEnabled || !tripSelected) {
                 return;
             }
@@ -239,7 +263,6 @@ const MapScreen = () => {
                             timeInterval: 1000,
                         },
                         async (location) => {
-                            // Double check trip is still enabled before processing location
                             if (!tripEnabled) {
                                 return;
                             }
@@ -270,12 +293,10 @@ const MapScreen = () => {
             }
         };
 
-        // Start tracking when trip is enabled
         if (tripEnabled) {
             initializeTracking();
         }
 
-        // Cleanup function
         return () => {
             if (locationInterval) {
                 clearInterval(locationInterval);
@@ -283,19 +304,27 @@ const MapScreen = () => {
             if (watchPosition) {
                 watchPosition.remove();
             }
-            // Reset refs
             locationIntervalRef.current = null;
             watchPositionRef.current = null;
         };
     }, [tripEnabled, tripSelected]);
 
-    // Interpolate rotation for marker
     const rotate = rotationValue.interpolate({
         inputRange: [0, 360],
         outputRange: ["0deg", "360deg"],
     });
 
-    // Render early return if trip is not enabled
+    const renderPickupConfirmation = () => (
+        Alert.alert(
+            "Pickup Confirmation",
+            "Did you reach the pickup point?",
+            [
+                { text: "Yes", onPress: handlePickupConfirmation },
+                { text: "Cancel", onPress: () => setShowPickupConfirmation(false), style: "cancel" }
+            ]
+        )
+    );
+
     if (!tripEnabled) {
         return (
             <TripSelectionComponent
@@ -308,29 +337,13 @@ const MapScreen = () => {
         );
     }
 
-    // Show loader if user location is not available
     if (!userLocation && tripEnabled) {
         return <Loader text="Fetching Location" />;
     }
 
-    // Handle pickup confirmation
-    const handlePickupConfirmation = (confirmed) => {
-        if (confirmed) {
-            // Move to the next pickup point
-            setPickupPoints(prevPoints => {
-                const remainingPoints = prevPoints.slice(1);
-                if (remainingPoints.length === 0) {
-                    // End the trip if all pickup points are completed
-                    handleEndTrip();
-                }
-                return remainingPoints;
-            });
-        }
-        setShowPickupConfirmation(false);
-    };
-
     return (
         <View style={tw`flex-1`}>
+            {showPickupConfirmation && renderPickupConfirmation()}
             <TouchableOpacity onPress={handleEndTrip} style={styles.endTripButton}>
                 <Text style={styles.endTripButtonText}>End Trip</Text>
             </TouchableOpacity>
@@ -355,33 +368,20 @@ const MapScreen = () => {
                         style={[styles.markerImage, { transform: [{ rotate }] }]}
                     />
                 </Marker>
-                {pickupPoints && pickupPoints.length > 0 && (
-                    <Marker coordinate={pickupPoints[0]} title="Pickup Point" />
+                {pickupPoints && pickupPoints.length > currentPickupIndex && (
+                    <Marker coordinate={pickupPoints[currentPickupIndex]} title="Pickup Point" />
                 )}
                 {directions.length > 0 && (
                     <Polyline
                         coordinates={directions}
                         strokeWidth={4}
                         strokeColor="blue"
+                        zIndex={1000}
                     />
                 )}
             </MapView>
-            {showPickupConfirmation && (
-                <View style={styles.confirmationContainer}>
-                    <Text style={styles.confirmationText}>Did you reach the pickup point?</Text>
-                    <View style={styles.confirmationButtons}>
-                        <TouchableOpacity onPress={() => handlePickupConfirmation(true)} style={styles.confirmationButton}>
-                            <Text style={styles.confirmationButtonText}>Yes</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handlePickupConfirmation(false)} style={styles.confirmationButton}>
-                            <Text style={styles.confirmationButtonText}>No</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            )}
         </View>
     );
-
 };
 
 const styles = StyleSheet.create({
@@ -411,42 +411,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         fontSize: 16,
         textAlign: "center",
-    },
-    confirmationContainer: {
-        position: "absolute",
-        bottom: 20,
-        left: 20,
-        right: 20,
-        backgroundColor: "white",
-        padding: 20,
-        borderRadius: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.8,
-        shadowRadius: 2,
-        elevation: 5,
-    },
-    confirmationText: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 10,
-        textAlign: "center",
-    },
-    confirmationButtons: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-    },
-    confirmationButton: {
-        backgroundColor: "blue",
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 10,
-    },
-    confirmationButtonText: {
-        color: "white",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
+    }
 });
 
 export default MapScreen;
