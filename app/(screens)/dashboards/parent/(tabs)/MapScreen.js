@@ -185,7 +185,7 @@ const MapScreen = () => {
   return (
     <View style={styles.container}>
      <MapView
-  ref={mapRef}
+  ref={mapRef} 
   style={styles.map}
   initialRegion={{
     latitude: driverLocation ? driverLocation.latitude : 17.385044, // Use driver location or default
