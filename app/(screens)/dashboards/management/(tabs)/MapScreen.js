@@ -111,7 +111,6 @@ const MapScreen = () => {
   useEffect(() => {
     if (schoolID) {
       fetchBusLocations();
-      setLoading(false);
     }
   }, [schoolID, fetchBusLocations]);
 
