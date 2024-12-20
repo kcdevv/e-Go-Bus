@@ -14,6 +14,12 @@ const TripSelectionComponent = ({
   const [tripOptions, setTripOptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // useEffect(() => {
+  //   setTripEnabled(false);
+  //   setTripSelected(null);
+  //   console.log("tripEnabled", tripEnabled);
+  // }, []);
+
   // Fetch trip data and update trip options
   useEffect(() => {
     const fetchTrips = async () => {
@@ -82,13 +88,13 @@ const TripSelectionComponent = ({
       <TouchableOpacity
         onPress={() => {
           if (tripSelected) {
-            setTripEnabled(!tripEnabled); // Toggle trip state
+            setTripEnabled(true);
           } else {
             Alert.alert("Select a Trip", "Please select a trip before starting.");
           }
         }}
         style={[tw`py-3 px-6 rounded-full`, tripSelected ? tw`bg-blue-500` : tw`bg-gray-400`]}
-        disabled={!tripSelected}  // Disable if no trip is selected
+        disabled={!tripSelected}
       >
         <Text style={tw`text-white text-lg font-bold`}>
           {tripEnabled ? "End Trip" : "Start Trip"}

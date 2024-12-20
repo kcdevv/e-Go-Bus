@@ -16,9 +16,9 @@ const PickupConfirmationOverlay = ({ onDone }) => {
     return (
         <View style={styles.overlayContainer}>
             <View style={styles.overlayContent}>
-                <Text style={styles.overlayText}>You have reached the pickup point</Text>
+                <Text style={styles.overlayText}>Childrens are ready at pickup point</Text>
                 <TouchableOpacity style={styles.doneButton} onPress={onDone}>
-                    <Text style={styles.doneButtonText}>Done</Text>
+                    <Text style={styles.doneButtonText}>Arrived</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -27,7 +27,7 @@ const PickupConfirmationOverlay = ({ onDone }) => {
 
 const MapScreen = () => {
     const [userLocation, setUserLocation] = useState(null);
-    const [heading, setHeading] = useState(0);
+    const [heading, setHeading] = useState(null);
     const [tripEnabled, setTripEnabled] = useState(false);
     const [tripDetails, setTripDetails] = useState(null);
     const [tripSelected, setTripSelected] = useState(null);
@@ -43,34 +43,68 @@ const MapScreen = () => {
     const lastHeadingRef = useRef(0);
     const pickupPointsFetchedRef = useRef(false);
 
-    // Fetch and store pick up points
-    const storePickupPoints = useCallback(async ({ tripID }) => {
+    // Fetch pickup points from Firebase
+    const fetchPickupPoints = useCallback(async ({ tripID }) => {
         try {
-            // Only fetch if not already fetched for this trip
             if (!pickupPointsFetchedRef.current) {
                 const pickupPoints = await getPickupPointsData(tripID);
-                const pickupLocations = pickupPoints.map(point => point?.pickupLocation);
-                if (pickupLocations.length > 0) {
-                    const points = pickupLocations.map(location => {
-                        const [latitude, longitude] = location.split(',').map(Number);
+                console.log("pickupPoints", pickupPoints);
+                
+                if (pickupPoints && pickupPoints.length > 0) {
+                    const points = pickupPoints.map(point => {
+                        if (!point?.pickupLocation) {
+                            console.warn("Missing pickup location for point:", point);
+                            return null;
+                        }
+                        const [latitude, longitude] = point.pickupLocation.split(',').map(coord => Number(coord.trim()));
+                        if (isNaN(latitude) || isNaN(longitude)) {
+                            console.warn("Invalid coordinates:", point.pickupLocation);
+                            return null;
+                        }
                         return { latitude, longitude };
-                    });
-                    setPickupPoints(points);
-                    setCurrentPickupIndex(0);
-                    pickupPointsFetchedRef.current = true;
+                    }).filter(point => point !== null);
+
+                    if (points.length > 0) {
+                        setPickupPoints(points);
+                        setCurrentPickupIndex(0);
+                        pickupPointsFetchedRef.current = true;
+                    } else {
+                        console.warn("No valid pickup locations found");
+                    }
                 } else {
-                    console.warn("No pickup locations available for this trip");
+                    console.warn("No pickup points available for this trip");
                 }
             }
         } catch (error) {
-            console.error("Error fetching pickup points from AsyncStorage:", error);
+            console.error("Error fetching pickup points:", error);
         }
     }, []);
 
     // Reset pickup points fetch flag when trip is disabled
     useEffect(() => {
+        console.log("MapScreen useEffect called");
+        
         if (!tripEnabled) {
+            console.log("Trip disabled, cleaning up...");
+            // Clear location tracking when trip is disabled
+            if (watchPositionRef.current) {
+                watchPositionRef.current.remove();
+                watchPositionRef.current = null;
+            }
+            if (locationIntervalRef.current) {
+                clearInterval(locationIntervalRef.current);
+                locationIntervalRef.current = null;
+            }
+            // Reset all location related states
+            setUserLocation(null);
+            setHeading(null);
+            setDirections([]);
+            lastHeadingRef.current = 0;
+            lastFirebaseUpdateRef.current = 0;
+            setTripSelected(null);
             pickupPointsFetchedRef.current = false;
+            setPickupPoints([]);
+            console.log("Cleanup completed, tripEnabled:", tripEnabled);
         }
     }, [tripEnabled]);
 
@@ -92,6 +126,8 @@ const MapScreen = () => {
                 {
                     text: "Yes, End Trip",
                     onPress: async () => {
+                        setTripEnabled(false);
+                        setTripSelected(null);
                         try {
                             if (watchPositionRef.current) {
                                 await watchPositionRef.current.remove();
@@ -102,14 +138,14 @@ const MapScreen = () => {
                                 locationIntervalRef.current = null;
                             }
                             setUserLocation(null);
-                            setHeading(0);
+                            setHeading(null);
                             setDirections([]);
                             setCurrentPickupIndex(0);
                             lastHeadingRef.current = 0;
                             lastFirebaseUpdateRef.current = 0;
-                            setTripEnabled(false);
                             pickupPointsFetchedRef.current = false;
-                            console.log("Trip ended and all tracking stopped");
+                            setPickupPoints([]);
+                            console.log("Trip ended and all tracking/updates stopped");
                         } catch (error) {
                             console.error("Error stopping trip:", error);
                             Alert.alert("Error", "Failed to properly end trip");
@@ -121,8 +157,8 @@ const MapScreen = () => {
     };
 
     const fetchUserLocation = useCallback(async () => {
-        if (!tripEnabled) return;
-        
+        console.log("fetchUserLocation called, tripEnabled:", tripEnabled);
+        if (!tripEnabled || !tripSelected) return; // Ensure trip is active
         try {
             const location = await getLocationAsync();
             const updatedLocation = {
@@ -137,12 +173,11 @@ const MapScreen = () => {
                 setHeading(location.coords.heading);
                 lastHeadingRef.current = location.coords.heading;
                 rotateMarker(rotationValue, location.coords.heading);
-            } else {
-                setHeading(lastHeadingRef.current);
             }
 
             const now = Date.now();
-            if (now - lastFirebaseUpdateRef.current >= 2000) {
+            if (tripEnabled && now - lastFirebaseUpdateRef.current >= 2000) {
+                // console.log("Updating Firebase, tripEnabled:", tripEnabled);
                 await updateFirebase(
                     database,
                     tripDetails?.busId,
@@ -239,14 +274,14 @@ const MapScreen = () => {
     }, [pickupPoints, userLocation, fetchDirections]);
 
     const handleUpdates = useCallback(async () => {
-        if (!tripEnabled || !tripDetails) return;
+        if (!tripEnabled || !tripDetails || !tripSelected) return; // Add tripSelected check
         try {
             const location = await fetchUserLocation();
             if (!location) return;
         } catch (error) {
             Alert.alert("Update Error", error.message);
         }
-    }, [fetchUserLocation, tripEnabled, tripDetails]);
+    }, [fetchUserLocation, tripEnabled, tripDetails, tripSelected]);
 
     const handlePickupConfirmation = () => {
         setShowPickupConfirmation(false);
@@ -269,7 +304,7 @@ const MapScreen = () => {
             }
 
             try {
-                await storePickupPoints({ tripID: tripSelected });
+                await fetchPickupPoints({ tripID: tripSelected });
                 
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status === 'granted') {
@@ -280,7 +315,7 @@ const MapScreen = () => {
                             timeInterval: 1000,
                         },
                         async (location) => {
-                            if (!tripEnabled) return;
+                            if (!tripEnabled || !tripSelected) return;
 
                             const updatedLocation = {
                                 latitude: location?.coords?.latitude,
@@ -311,7 +346,7 @@ const MapScreen = () => {
                             }
 
                             const now = Date.now();
-                            if (now - lastFirebaseUpdateRef.current >= 2000) {
+                            if (now - lastFirebaseUpdateRef.current >= 2000 && tripEnabled && tripSelected) {
                                 await updateFirebase(
                                     database,
                                     tripDetails?.busId,
@@ -336,10 +371,12 @@ const MapScreen = () => {
         };
 
         if (tripEnabled) {
+            console.log("Initializing tracking...");
             initializeTracking();
         }
 
         return () => {
+            console.log("Cleaning up tracking...");
             if (locationInterval) {
                 clearInterval(locationInterval);
             }
@@ -410,7 +447,6 @@ const MapScreen = () => {
                         coordinates={directions}
                         strokeWidth={4}
                         strokeColor="blue"
-                        zIndex={1000}
                     />
                 )}
             </MapView>

@@ -29,12 +29,19 @@ export const rotateMarker = (rotationValue, currentHeading) => {
 
 // Function to update Firebase with location and heading
 export const updateFirebase = async (database, busId, schoolId, tripId, location, currentHeading) => {
-  if (!busId || !schoolId || !tripId) {
-    console.warn("Missing trip details for Firebase update");
+  // Add immediate return if any of these are missing
+  if (!busId || !schoolId || !tripId || !location) {
+    console.warn("Missing required parameters for Firebase update");
     return;
   }
 
   try {
+    // Add a check for valid coordinates
+    if (!location.coords || !location.coords.latitude || !location.coords.longitude) {
+      console.warn("Invalid location data for Firebase update");
+      return;
+    }
+
     await updateFirebaseData(database, {
       busId,
       schoolId,
