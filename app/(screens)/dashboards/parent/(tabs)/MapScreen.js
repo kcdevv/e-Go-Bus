@@ -54,6 +54,8 @@ const MapScreen = () => {
           edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
           animated: true,
         });
+
+        // setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching route:', error.response?.data || error.message);
@@ -175,7 +177,7 @@ const MapScreen = () => {
   };
 
   if (loading) {
-    return <Loader />;
+    return <Loader text='Fetching Location...' />;
   }
 
   const adjustedDriverLocation = driverLocation

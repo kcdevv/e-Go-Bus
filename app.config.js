@@ -9,16 +9,14 @@ export default {
     newArchEnabled: true,
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./app/assets/images/logo.png",
+    icon: "./app/assets/images/icon.png",
     userInterfaceStyle: "light",
     splash: {
       image: "./app/assets/images/logo.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff",
     },
     notification: {
       "icon": "./app/assets/images/logo.png",
-      "color": "#fff",
       "androidMode": "default",
       "androidCollapsedTitle": "e-Go Bus"
     },
