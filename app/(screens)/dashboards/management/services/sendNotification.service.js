@@ -1,39 +1,28 @@
-import * as Notifications from 'expo-notifications';
+import axios from 'axios'
 
-export const sendNotification = async (message) => {
+export const sendNotificationToParents = async (message) => {
   try {
-    // Get the Expo Push Token
-    const { data: token } = await Notifications.getExpoPushTokenAsync();
-    console.log('Expo Push Token:', token);
+    const tokens = [
+      "ExponentPushToken[Qgx113E9yyNHoEXEJVEFrj]",
+      "ExponentPushToken[gzBEdcPcUwAWLnjpsoWUNY]",
+    ];
 
-    // Set notification handler (if not already set elsewhere)
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
-    });
-
-    // Send the notification to your server
-    const response = await fetch(
-      'https://us-central1-egobus-5be34.cloudfunctions.net/sendExpoNotification',
+    const response = await axios.post(
+      'https://us-central1-egobus-5be34.cloudfunctions.net/sendNotificationToMany',
       {
-        method: 'POST',
+        tokens,
+        title: 'Test Notification by SSL the Boss',
+        body: message,
+      },
+      {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          token, // Use the retrieved token
-          title: 'Test Notification',
-          body: message,
-        }),
       }
     );
 
-    const result = await response.json();
-    console.log('Notification response:', result);
+    console.log('Notification response:', response.data);
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('Error sending notification:', error.response?.data || error.message);
   }
 };

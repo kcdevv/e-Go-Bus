@@ -16,6 +16,12 @@ export default {
       resizeMode: "contain",
       backgroundColor: "#ffffff",
     },
+    notification: {
+      "icon": "./app/assets/images/logo.png",
+      "color": "#fff",
+      "androidMode": "default",
+      "androidCollapsedTitle": "e-Go Bus"
+    },
     ios: {
       supportsTablet: true,
       infoPlist: {
