@@ -12,10 +12,10 @@ const WhoYouAre = () => {
       <View style={tw`h-1/2 justify-between items-center`}>
         <Image
           source={require("../assets/images/logo.png")}
-          style={tw`h-32 w-32 mt-40`}
+          style={tw`h-64 w-64 mt-36`}
           resizeMode="contain"
         />
-        <Text style={[tw`font-bold text-2xl`]}>Tell us Who you are...</Text>
+        <Text style={[tw`font-bold text-2xl -mt-5`]}>Tell us Who you are...</Text>
       </View>
       <View style={tw`flex-1 h-1/2 px-10 justify-center`}>
         <View style={[tw`flex-1 justify-center`, {gap: 35}]}>

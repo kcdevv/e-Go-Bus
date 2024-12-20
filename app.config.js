@@ -9,11 +9,11 @@ export default {
     newArchEnabled: true,
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./app/assets/images/icon.png",
+    icon: "./app/assets/images/logo.png",
     userInterfaceStyle: "light",
     splash: {
       image: "./app/assets/images/logo.png",
-      resizeMode: "contain",
+      resizeMode: "cover",
       backgroundColor: "white",
     },
     notification: {
