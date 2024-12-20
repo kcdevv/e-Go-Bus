@@ -55,7 +55,7 @@ const MapScreen = () => {
           animated: true,
         });
 
-        // setLoading(false);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching route:', error.response?.data || error.message);
