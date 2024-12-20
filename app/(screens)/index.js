@@ -72,7 +72,7 @@ const Index = () => {
         <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}>
           -{" "}
         </Text>
-        EGO BUS
+        e-Go Bus
         <Text style={{ fontSize: 30, fontWeight: "bold", color: "#FCD32D" }}>
           {" "}
           -
