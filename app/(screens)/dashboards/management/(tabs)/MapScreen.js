@@ -1,4 +1,4 @@
-import { StyleSheet, Alert } from "react-native";
+import { StyleSheet, Alert, Image } from "react-native";
 import React, { useState, useEffect, useCallback } from "react";
 import MapView, { Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -135,8 +135,12 @@ const MapScreen = () => {
           }}
           title={location.title}
           rotation={location.heading} // Set heading for rotation
-          image={busIcon} // Directly set the image as the marker icon
-        />
+        >
+          <Image
+            source={busIcon} // Custom bus icon
+            style={styles.markerImage} // Apply size adjustment here
+          />
+        </Marker>
       ))}
     </MapView>
   );
@@ -146,6 +150,10 @@ const styles = StyleSheet.create({
   map: {
     width: "100%",
     height: "100%",
+  },
+  markerImage: {
+    width: 40,  // Adjust width as needed
+    height: 40, // Adjust height as needed
   },
 });
 
