@@ -11,6 +11,7 @@ import {
   validateFields,
   updateProfilePic,
 } from "../services/parentAuth.service";
+import Loader from "../../components/Loader";
 
 const Parent = () => {
   const [schoolID, setSchoolID] = useState("");
@@ -18,10 +19,12 @@ const Parent = () => {
   const [studentID, setStudentID] = useState("");
   const [tripID, setTripID] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
   const handleSubmit = async () => {
     try {
+      setLoading(true);
       
       const validationResult = await validateFields(schoolID, busID, studentID, tripID);
 
@@ -70,6 +73,8 @@ const Parent = () => {
       }
     } catch (error) {
       console.error("Error in handleSubmit:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,6 +97,10 @@ const Parent = () => {
       setSelectedImage(result.assets[0].uri);
     }
   };
+
+  if (loading) {
+    return <Loader text="Authenticating..." />;
+  }
 
   return (
     <View style={[tw`flex-1 h-full justify-center items-center w-full px-7`, { gap: 10 }]}>

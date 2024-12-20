@@ -14,11 +14,10 @@ const TripSelectionComponent = ({
   const [tripOptions, setTripOptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // useEffect(() => {
-  //   setTripEnabled(false);
-  //   setTripSelected(null);
-  //   console.log("tripEnabled", tripEnabled);
-  // }, []);
+  useEffect(() => {
+    setTripEnabled(false);
+    console.log("tripEnabled from comp", tripEnabled);
+  }, []);
 
   // Fetch trip data and update trip options
   useEffect(() => {

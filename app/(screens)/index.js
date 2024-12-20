@@ -5,6 +5,7 @@ import tw from "tailwind-react-native-classnames";
 import LottieView from "lottie-react-native";
 import registerDeviceToken from "./services/fetchTokenAndSaveRDB";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { registerDriverToken } from "./services/driverAuth";
 
 const Index = () => {
   const router = useRouter();
@@ -17,7 +18,7 @@ const Index = () => {
         const busID = await AsyncStorage.getItem("busID");
         const tripID = await AsyncStorage.getItem("tripID");
         const studentID = await AsyncStorage.getItem("studentID");
-        const driverName = await AsyncStorage.getItem("driverName");
+        const driverID = await AsyncStorage.getItem("driverID");
         const isManagement = await AsyncStorage.getItem("isManagement") === true;
 
         // console.log("SchoolID:", schoolID);
@@ -32,7 +33,8 @@ const Index = () => {
           if (schoolID && studentID && busID && tripID) {
             await registerDeviceToken(schoolID, studentID, busID, tripID);
             router.replace("dashboards/parent"); // Navigate to Parent Dashboard
-          } else if (schoolID && driverName && busID && tripID) {
+          } else if (schoolID && busID && driverID) {
+            await registerDriverToken(schoolID, busID);
             router.replace("dashboards/driver"); // Navigate to Driver Dashboard
           } else if (isManagement) {
             router.replace("dashboards/management"); // Navigate to Management Dashboard

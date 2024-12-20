@@ -9,14 +9,17 @@ import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Loader from "../../components/Loader";
 
 const Management = () => {
   const [schoolID, setSchoolID] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
   const handleSubmit = async () => {
     try {
+      setLoading(true);
 
       // authenticate the school
 
@@ -30,10 +33,16 @@ const Management = () => {
       });
     } catch (error) {
       console.error("Error saving school ID:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const disabled = schoolID.length === 0 || password.length === 0;
+
+  if (loading) {
+    return <Loader text="Authenticating..." />;
+  }
 
   return (
     <View

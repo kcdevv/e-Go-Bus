@@ -3,32 +3,49 @@ import {
   TextInput,
   View,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import tw from "tailwind-react-native-classnames";
 import { useNavigation } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { countTripsAndStore } from '../services/driverAuth';
+import { countTripsAndStore, storeDriverDetails, updateDriverToken, validateDriver, registerDriverToken } from '../services/driverAuth';
+import Loader from "../../components/Loader";
 
 const Driver = () => {
   const [schoolID, setSchoolID] = useState("");
   const [busID, setBusID] = useState("");
   const [driverID, setDriverID] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
   const handleSubmit = async () => {
     try {
-      // Store form data in AsyncStorage
+      setLoading(true);
+
+      // Validate driver credentials
+      const isValid = await validateDriver(schoolID, busID);
+      if (!isValid) {
+        setLoading(false);
+        return;
+      }
+
+      // Get device token for notifications
+      const deviceToken = await registerDriverToken(schoolID, driverID, busID);
+      await updateDriverToken(schoolID, busID, driverID, deviceToken);
+
+      // Store driver details
+      await storeDriverDetails(schoolID, busID, driverID);
+
+      // Store basic credentials
       await AsyncStorage.setItem('schoolID', schoolID);
       await AsyncStorage.setItem('busID', busID);
       await AsyncStorage.setItem('driverID', driverID);
 
-      // DO AUTHENTICATION
-
-      // count no.of trips
+      // Count and store trips
       await countTripsAndStore(schoolID, busID);
 
-      // Now, you can navigate or do something with the fetched data
+      // Navigate to dashboard
       navigation.reset({
         index: 0,
         routes: [
@@ -38,12 +55,19 @@ const Driver = () => {
         ],
       });
     } catch (error) {
-      console.error("Error storing data or fetching pickup points:", error);
+      console.error("Error in driver authentication:", error);
+      Alert.alert("Error", "Failed to authenticate driver");
+    } finally {
+      setLoading(false);
     }
   };
   
 
   const disabled = schoolID.length === 0 || driverID.length === 0 || busID.length === 0;
+
+  if (loading) {
+    return <Loader text="Authenticating..." />;
+  }
 
   return (
     <View
