@@ -7,7 +7,7 @@ import { updateAttendanceStatus, fetchStudentAttendance } from "../services/atte
 
 const StudentDetails = () => {
   const [studentData, setStudentData] = useState(null);
-  const [attendanceStatus, setAttendanceStatus] = useState(null);
+  const [attendanceStatus, setAttendanceStatus] = useState(true);
   const [tripID, setTripID] = useState('N/A');
   const [busID, setBusID] = useState('N/A');
   const [schoolID, setSchoolID] = useState('N/A');
@@ -75,8 +75,8 @@ const StudentDetails = () => {
         /> */}
         <Image
           source={
-            studentData.profilePic
-              ? { uri: studentData.profilePic }
+            studentData?.profilePic
+              ? { uri: studentData?.profilePic }
               : require('../../../../assets/images/student.png') // Default image
           }
           style={tw`w-20 h-20 rounded-full mb-2`}
@@ -84,15 +84,15 @@ const StudentDetails = () => {
 
         <View style={tw`w-full p-4 bg-yellow-100 rounded-lg mb-2 mt-2`}>
           <Text style={tw`text-center text-lg font-bold mb-2`}>
-            {studentData.standard} standard
+            {studentData?.standard} standard
           </Text>
-          <Text style={tw`text-lg mb-2`}>Name: {studentData.studentName}</Text>
-          <Text style={tw`text-lg mb-2`}>Roll No: {studentData.rollNo}</Text>
+          <Text style={tw`text-lg mb-2`}>Name: {studentData?.studentName}</Text>
+          <Text style={tw`text-lg mb-2`}>Roll No: {studentData?.rollNo}</Text>
           <Text style={tw`text-lg mb-2`}>
-            Parent Name: {studentData.parentName}
+            Parent Name: {studentData?.parentName}
           </Text>
-          <Text style={tw`text-lg mb-2`}>Phone No: {studentData.parentMobile}</Text>
-          <Text style={tw`text-lg`}>School Name: {studentData.schoolName}</Text>
+          <Text style={tw`text-lg mb-2`}>Phone No: {studentData?.parentMobile}</Text>
+          <Text style={tw`text-lg`}>School Name: {studentData?.schoolName}</Text>
         </View>
         <View style={tw`w-full p-4 bg-yellow-100 rounded-lg mt-4`}>
           <Text style={tw`text-lg font-bold text-center mb-2`}>Today</Text>
