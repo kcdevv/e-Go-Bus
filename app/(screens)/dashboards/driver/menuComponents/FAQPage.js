@@ -19,29 +19,30 @@ const FAQPage = () => {
   const faqs = [
     {
       id: 1,
-      question: "How do I track the bus?",
-      answer: "Once you log in, go to the 'Track Bus' tab to see the real-time location of the bus."
+      question: "How do I start a trip?",
+      answer: "To start a trip, select the desired trip from the 'Trip Selection' screen and click the 'Start Trip' button."
     },
     {
       id: 2,
-      question: "How do I report a lost item?",
-      answer: "Go to the 'Missing Items' section and select 'Report Lost Item.' Fill in the details and submit."
+      question: "How do I track my current location?",
+      answer: "Your location is automatically tracked while a trip is active. You can see your location on the map in real time."
     },
     {
       id: 3,
-      question: "Can I notify the driver if my child won't be on the bus?",
-      answer: "Yes, you can notify the driver by clicking on the 'Notify Driver' button in the app."
+      question: "How do I know the next pickup location?",
+      answer: "The next pickup location will be displayed on the map, and the route will be highlighted. You will also receive a notification when you are near the pickup point."
     },
     {
       id: 4,
-      question: "How do I update my contact information?",
-      answer: "Navigate to 'Profile' > 'Edit Profile' to update your contact details."
+      question: "What should I do when I reach a pickup point?",
+      answer: "When you reach a pickup point, a confirmation overlay will appear. Click 'Done' to confirm the pickup and move to the next location."
     },
     {
       id: 5,
-      question: "What should I do if I face technical issues?",
-      answer: "You can contact our support team via the 'Help' section in the app or email us at support@egobus.com."
+      question: "How do I end a trip?",
+      answer: "To end a trip, press the 'End Trip' button on the map screen. Confirm your action when prompted. This will stop location tracking and end the trip."
     },
+  
   ];
 
   const toggleExpand = (id) => {

@@ -16,30 +16,37 @@ const FAQPage = () => {
   const faqs = [
     {
       id: 1,
-      question: "How do I track the bus?",
-      answer: "Once you log in, go to the 'Track Bus' tab to see the real-time location of the bus."
+      question: "How can I track my child's bus in real time?",
+      answer: "Once you log into your parent account, go to the 'Track Bus' section to see your child's bus location in real time. You can also receive notifications for pickup and drop-off times."
     },
     {
       id: 2,
-      question: "How do I report a lost item?",
-      answer: "Go to the 'Missing Items' section and select 'Report Lost Item.' Fill in the details and submit."
+      question: "What should I do if my child loses something on the bus?",
+      answer: "If your child loses an item, go to the 'Missing Items ' section in the app their you can find  details like the item's description,Item Image."
     },
     {
       id: 3,
-      question: "Can I notify the driver if my child won't be on the bus?",
-      answer: "Yes, you can notify the driver by clicking on the 'Notify Driver' button in the app."
+      question: "Can I notify the bus driver if my child will be absent?",
+      answer: "Yes, if your child won't be riding the bus, you can easily mark absent in the app. This ensures the bus doesn't stop unnecessarily."
     },
+   
     {
       id: 4,
-      question: "How do I update my contact information?",
-      answer: "Navigate to 'Profile' > 'Edit Profile' to update your contact details."
+      question: "What should I do if I encounter any technical issues with the app?",
+      answer: "If you experience any issues, You can  reach out to our support team via email at egobusgsc@gmail.com, and we'll resolve the issue as soon as possible."
     },
     {
       id: 5,
-      question: "What should I do if I face technical issues?",
-      answer: "You can contact our support team via the 'Help' section in the app or email us at support@egobus.com."
+      question: "How can I check if my child is confirmed to ride the bus?",
+      answer: "To confirm your child's attendance, go to the 'Attendance' tab in the app. You can verify if their ride has been confirmed for a specific day or trip."
+    },
+    {
+      id: 6,
+      question: "What happens if there are changes to the bus route or schedule?",
+      answer: "If there are any changes to the route or schedule, you will receive an instant notification via the app. Be sure to check your notifications regularly to stay informed."
     },
   ];
+  
 
   const toggleExpand = (id) => {
     setExpandedId(expandedId === id ? null : id);
