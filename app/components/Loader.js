@@ -8,10 +8,13 @@ const Loader = ({
   text = "Loading...", 
   backgroundColor = "#FFFFFF"
 }) => {
+  // Determine the text color based on the background color
+  const textColor = backgroundColor === "#FFFFFF" ? "#000000" : "#FFFFFF";
+
   return (
     <View style={[styles.loader, { backgroundColor }]}>
       <ActivityIndicator size={size} color={color} />
-      <Text>{text}</Text>
+      <Text style={[tw`text-center mt-2 text-lg font-bold`, { color: textColor }]}>{text}</Text>
     </View>
   );
 };
