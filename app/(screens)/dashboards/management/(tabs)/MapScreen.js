@@ -1,52 +1,27 @@
-import { StyleSheet, Image, Alert } from "react-native";
+import { StyleSheet, Alert } from "react-native";
 import React, { useState, useEffect, useCallback } from "react";
-import MapView from "react-native-maps";
-import { Marker } from "react-native-maps";
+import MapView, { Marker } from "react-native-maps";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { get, ref } from "firebase/database";
 import { database } from "../../../../../firebase.config";
 import Loader from "../../../../components/Loader";
 
-// Memoized Marker component to avoid unnecessary re-renders
-const MemoizedMarker = React.memo(({ location }) => {
-  return (
-    <Marker
-      coordinate={{
-        latitude: location.latitude,
-        longitude: location.longitude,
-      }}
-      title={location.title}
-    >
-      <Image
-        source={require("../../../../assets/images/bus.png")}
-        style={[
-          styles.busIcon,
-          { transform: [{ rotate: `${location.heading}deg` }] }, // Rotate the bus icon
-        ]}
-      />
-    </Marker>
-  );
-}, (prevProps, nextProps) => {
-  // Only re-render if the location properties change
-  return (
-    prevProps.location.latitude === nextProps.location.latitude &&
-    prevProps.location.longitude === nextProps.location.longitude &&
-    prevProps.location.heading === nextProps.location.heading
-  );
-});
+// Custom bus icon image
+const busIcon = require("../../../../assets/icons/bus.png");
 
 const MapScreen = () => {
   const [schoolID, setSchoolID] = useState(null);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+  const [mapRegion, setMapRegion] = useState(null);
+  const [isCentroidSet, setIsCentroidSet] = useState(false);
+
   // Fetch schoolID from AsyncStorage
   useEffect(() => {
     const fetchSchoolID = async () => {
       try {
         const storedSchoolID = await AsyncStorage.getItem("schoolID");
         const sanitizedSchoolID = storedSchoolID.replace(/['"]/g, "").trim();
-        // console.log(sanitizedSchoolID)
         if (sanitizedSchoolID) {
           setSchoolID(sanitizedSchoolID);
         } else {
@@ -94,24 +69,32 @@ const MapScreen = () => {
         }
       });
 
-      // Only update locations if there's a change in coordinates or heading
-      setLocations((prevLocations) => {
-        const updatedLocations = fetchedLocations.filter((newLocation) => {
-          return !prevLocations.some((prevLocation) =>
-            prevLocation.id === newLocation.id &&
-            prevLocation.latitude === newLocation.latitude &&
-            prevLocation.longitude === newLocation.longitude &&
-            prevLocation.heading === newLocation.heading
-          );
+      // Calculate centroid for zooming when opening the map for the first time
+      if (!isCentroidSet && fetchedLocations.length > 0) {
+        const latitudes = fetchedLocations.map((loc) => loc.latitude);
+        const longitudes = fetchedLocations.map((loc) => loc.longitude);
+
+        const centroid = {
+          latitude: latitudes.reduce((sum, lat) => sum + lat, 0) / latitudes.length,
+          longitude: longitudes.reduce((sum, lon) => sum + lon, 0) / longitudes.length,
+        };
+
+        setMapRegion({
+          ...centroid,
+          latitudeDelta: 0.1,
+          longitudeDelta: 0.1,
         });
 
-        return updatedLocations.length > 0 ? fetchedLocations : prevLocations;
-      });
+        setIsCentroidSet(true);
+      }
+
+      setLocations(fetchedLocations);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching bus locations:", error);
       Alert.alert("Error", "Failed to fetch bus locations");
     }
-  }, [schoolID]);
+  }, [schoolID, isCentroidSet]);
 
   // Set up interval to fetch bus locations every 3 seconds
   useEffect(() => {
@@ -121,8 +104,7 @@ const MapScreen = () => {
       fetchBusLocations();
     }, 3000);
 
-    // Clear interval on component unmount
-    return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId); // Clear interval on component unmount
   }, [schoolID, fetchBusLocations]);
 
   // Initial fetch when schoolID changes
@@ -141,15 +123,20 @@ const MapScreen = () => {
   return (
     <MapView
       style={styles.map}
-      initialRegion={{
-        latitude: 17.385044, // Default latitude
-        longitude: 78.486671, // Default longitude
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      }}
+      region={mapRegion}
+      onRegionChangeComplete={(region) => setMapRegion(region)}
     >
       {locations.map((location) => (
-        <MemoizedMarker key={location.id} location={location} />
+        <Marker
+          key={location.id}
+          coordinate={{
+            latitude: location.latitude,
+            longitude: location.longitude,
+          }}
+          title={location.title}
+          rotation={location.heading} // Set heading for rotation
+          image={busIcon} // Directly set the image as the marker icon
+        />
       ))}
     </MapView>
   );
@@ -159,11 +146,6 @@ const styles = StyleSheet.create({
   map: {
     width: "100%",
     height: "100%",
-  },
-  busIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: "contain",
   },
 });
 
