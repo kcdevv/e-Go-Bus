@@ -35,13 +35,9 @@ const FAQPage = () => {
       question: "What should I do if I encounter any technical issues with the app?",
       answer: "If you experience any issues, You can  reach out to our support team via email at egobusgsc@gmail.com, and we'll resolve the issue as soon as possible."
     },
+    
     {
       id: 5,
-      question: "How can I check if my child is confirmed to ride the bus?",
-      answer: "To confirm your child's attendance, go to the 'Attendance' tab in the app. You can verify if their ride has been confirmed for a specific day or trip."
-    },
-    {
-      id: 6,
       question: "What happens if there are changes to the bus route or schedule?",
       answer: "If there are any changes to the route or schedule, you will receive an instant notification via the app. Be sure to check your notifications regularly to stay informed."
     },
