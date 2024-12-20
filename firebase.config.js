@@ -3,12 +3,9 @@ import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 import Constants from 'expo-constants';
 
-// console.log(Constants.expoConfig.extra.FIREBASE_API_KEY);
-// console.log(Constants.expoConfig.extra.FIREBASE_DATABASE_URL);
-
 
 const firebaseConfig = {
-  apiKey: Constants.expoConfig.extra.FIREBASE_API_KEY, 
+  apiKey: Constants.expoConfig.extra.FIREBASE_API_KEY,
   authDomain: Constants.expoConfig.extra.FIREBASE_AUTH_DOMAIN,
   projectId: Constants.expoConfig.extra.FIREBASE_PROJECT_ID,
   storageBucket: Constants.expoConfig.extra.FIREBASE_STORAGE_BUCKET,

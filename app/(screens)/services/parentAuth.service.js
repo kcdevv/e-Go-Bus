@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { storage, database } from '../../../firebase.config';  // Adjust the path as needed
-import { ref as dbRef, get, update, push, set } from 'firebase/database';  // Import `set` to create data if needed
+import { storage, database } from '../../../firebase.config';
+import { ref as dbRef, get, update, push, set } from 'firebase/database';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Alert } from 'react-native';
 

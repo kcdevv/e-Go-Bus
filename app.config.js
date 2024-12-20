@@ -59,6 +59,7 @@ export default {
         },
       },
       useNextNotificationsApi: true,
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON,
     },
     web: {
       favicon: "./assets/favicon.png",
@@ -77,7 +78,7 @@ export default {
         origin: false,
       },
       eas: {
-        projectId: process.env.EAS_PROJECT_ID, // EAS Project ID
+        projectId: "edf3ac22-146d-476a-a235-f1ed9ff741fe", // EAS Project ID
       },
     },
   },
