@@ -14,6 +14,7 @@ export default {
     splash: {
       image: "./app/assets/images/logo.png",
       resizeMode: "contain",
+      backgroundColor: "white",
     },
     notification: {
       "icon": "./app/assets/images/logo.png",

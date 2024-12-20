@@ -32,22 +32,23 @@ const SosScreen = () => {
   };
 
   return (
-    <View style={tw`flex-1 bg-red-600 items-center justify-center`}>
+    <View style={tw`flex-1 bg-white items-center justify-center`}>
       {/* SOS Icon */}
-      <View style={tw`mb-8`}>
+      <View style={tw``}>
         <Image
-          source={require("../../../../assets/images/sos-icon-removebg-preview.png")}
-          style={tw`w-40 h-40`}
+          source={require("../../../../assets/images/sos.png")}
+          style={tw`w-60 h-60`}
+          resizeMode="contain"
         />
       </View>
 
       {/* Countdown or Action Message */}
       {alertActive ? (
-        <Text style={tw`text-white text-3xl mb-2 font-bold`}>
+        <Text style={tw`text-red-600 text-3xl mb-2 font-bold`}>
           Alert in {countdown}...
         </Text>
       ) : (
-        <Text style={tw`text-white text-lg text-center font-semibold`}>
+        <Text style={tw`text-red-600 -mt-5 text-lg text-center font-semibold`}>
           Press SOS to send an emergency alert
         </Text>
       )}
