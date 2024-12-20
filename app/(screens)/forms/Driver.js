@@ -66,7 +66,7 @@ const Driver = () => {
   const disabled = schoolID.length === 0 || driverID.length === 0 || busID.length === 0;
 
   if (loading) {
-    return <Loader text="Authenticating..." />;
+    return <Loader text="Authenticating..."color="#FFFFFF" backgroundColor="#FCD32D" />;
   }
 
   return (

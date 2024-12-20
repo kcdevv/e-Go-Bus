@@ -99,7 +99,7 @@ const Parent = () => {
   };
 
   if (loading) {
-    return <Loader text="Authenticating..." />;
+    return <Loader text="Authenticating..." color="#FFFFFF" backgroundColor="#FCD32D"/>;
   }
 
   return (
