@@ -19,7 +19,7 @@ export const updateAttendanceStatus = async (schoolID, busID, tripID, studentID,
           for (const [key, student] of Object.entries(data?.students)) {
             if (student?.studentID === studentID) {
               // Update attendanceStatus for the matched student
-              const studentRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints/${pickupPointID}/students/${key}`);
+              const studentRef = dbRef(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints/students/`);
               await update(studentRef, {
                 attendanceStatus: status,
               });

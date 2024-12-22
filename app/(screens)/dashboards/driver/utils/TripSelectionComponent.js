@@ -25,7 +25,7 @@ const TripSelectionComponent = ({
       try {
         setLoading(true);
         const noOfTrips = JSON.parse(await AsyncStorage.getItem('noOfTrips'));
-
+        await AsyncStorage.setItem('tripSelected', JSON.stringify(tripSelected));
         // Only proceed if valid trip details are found
         if (noOfTrips) {
           const options = Array.from({ length: noOfTrips }, (_, i) => `T00${i + 1}`);
