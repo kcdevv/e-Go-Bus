@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import tw from "tailwind-react-native-classnames";
-import { getDatabase, ref, onValue } from "firebase/database";
+import { getDatabase, ref, onValue, set } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Attendance = () => {
@@ -24,17 +24,26 @@ const Attendance = () => {
       const storedSchoolID = await AsyncStorage.getItem("schoolID");
       const storedBusID = await AsyncStorage.getItem("busID");
       const storedTripID = await AsyncStorage.getItem("tripID");
-       console.log(storedTripID);
       if (storedSchoolID) setSchoolID(storedSchoolID);
       if (storedBusID) setBusID(storedBusID);
-      if (storedTripID) {
-        // const decodedTripID = decodeURIComponent(storedTripID).replace(/"/g, "");
-        setTripID(storedTripID);
-      }
+      if (storedTripID) setTripID(storedTripID);
     } catch (error) {
       console.error("Error loading data from AsyncStorage:", error);
     }
   };
+
+  // const updateAttendanceStatus = async (studentID, status) => {
+  //   try {
+  //     const attendanceRef = ref(
+  //       db,
+  //       `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints/${studentID}`
+  //     );
+  //     await set(attendanceRef, { attendanceStatus: status });
+  //     console.log(`Updated attendance for ${studentID}: ${status}`);
+  //   } catch (error) {
+  //     console.error("Error updating attendance:", error);
+  //   }
+  // };
 
   useEffect(() => {
     const getStudents = async () => {
@@ -46,12 +55,10 @@ const Attendance = () => {
             db,
             `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/`
           );
-          console.log(studentsRef);
           const unsubscribe = onValue(
             studentsRef,
             (snapshot) => {
               const data = snapshot.val();
-              console.log(data);
               if (data) {
                 const studentList = Object.keys(data).map((key) => ({
                   id: key,
@@ -67,7 +74,7 @@ const Attendance = () => {
             }
           );
 
-          return () => unsubscribe(); // Cleanup on unmount
+          return () => unsubscribe();
         }
       } catch (error) {
         console.error("Error in getStudents:", error);
@@ -76,7 +83,6 @@ const Attendance = () => {
 
     getStudents();
   }, [schoolID, busID, tripID]);
- 
 
   if (loading) {
     return (
@@ -113,13 +119,20 @@ const Attendance = () => {
               </View>
             </View>
 
+            {/* Buttons for Absent and Present */}
             <View style={tw`flex-row justify-around items-center`}>
-              <TouchableOpacity style={tw`flex-row items-center`}>
+              <TouchableOpacity
+                style={tw`flex-row items-center`}
+                onPress={() => updateAttendanceStatus(student.id, "Absent")}
+              >
                 <Text style={tw`text-red-500 text-2xl font-bold mr-2`}>✗</Text>
                 <Text style={tw`text-red-500 text-sm`}>Absent</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={tw`flex-row items-center`}>
+              <TouchableOpacity
+                style={tw`flex-row items-center`}
+                onPress={() => updateAttendanceStatus(student.id, "Present")}
+              >
                 <Text style={tw`text-green-500 text-2xl font-bold mr-2`}>✓</Text>
                 <Text style={tw`text-green-500 text-sm`}>Present</Text>
               </TouchableOpacity>
