@@ -32,7 +32,18 @@ const Attendance = () => {
     }
   };
 
-
+  // const updateAttendanceStatus = async (studentID, status) => {
+  //   try {
+  //     const attendanceRef = ref(
+  //       db,
+  //       `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints/${studentID}`
+  //     );
+  //     await set(attendanceRef, { attendanceStatus: status });
+  //     console.log(`Updated attendance for ${studentID}: ${status}`);
+  //   } catch (error) {
+  //     console.error("Error updating attendance:", error);
+  //   }
+  // };
 
   useEffect(() => {
     const getStudents = async () => {
@@ -42,7 +53,7 @@ const Attendance = () => {
         if (schoolID && busID && tripID) {
           const studentsRef = ref(
             db,
-            `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentsRef}`
+            `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/`
           );
           const unsubscribe = onValue(
             studentsRef,
