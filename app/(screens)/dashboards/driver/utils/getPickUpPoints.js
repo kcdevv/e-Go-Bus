@@ -13,6 +13,8 @@ const getPickupPointsData = async (tripID) => {
     }
 
     console.log("Trip ID:", tripID);
+    await AsyncStorage.setItem('tripID', tripID);
+    console.log(" async Trip ID:", tripID);
 
     const pickupPointsRef = dbRef(
       database,

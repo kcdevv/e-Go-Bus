@@ -183,6 +183,7 @@ const MapScreen = () => {
   const fetchUserLocation = useCallback(async () => {
     if (!isTripActiveRef.current || !tripEnabled || !tripSelected) return;
     try {
+      
       console.log("fetchUserLocation called, tripEnabled:", tripEnabled);
       const location = await getLocationAsync();
       const updatedLocation = {

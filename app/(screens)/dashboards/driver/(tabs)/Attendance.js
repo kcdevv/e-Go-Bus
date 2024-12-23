@@ -24,12 +24,12 @@ const Attendance = () => {
       const storedSchoolID = await AsyncStorage.getItem("schoolID");
       const storedBusID = await AsyncStorage.getItem("busID");
       const storedTripID = await AsyncStorage.getItem("tripID");
-
+       console.log(storedTripID);
       if (storedSchoolID) setSchoolID(storedSchoolID);
       if (storedBusID) setBusID(storedBusID);
       if (storedTripID) {
-        const decodedTripID = decodeURIComponent(storedTripID).replace(/"/g, "");
-        setTripID(decodedTripID);
+        // const decodedTripID = decodeURIComponent(storedTripID).replace(/"/g, "");
+        setTripID(storedTripID);
       }
     } catch (error) {
       console.error("Error loading data from AsyncStorage:", error);
@@ -76,6 +76,7 @@ const Attendance = () => {
 
     getStudents();
   }, [schoolID, busID, tripID]);
+ 
 
   if (loading) {
     return (
