@@ -69,7 +69,7 @@ const MapScreen = () => {
         if (!pickupPointsFetchedRef.current) {
           const pickupPoints = await getPickupPointsData(tripID);
           const notificationData = await notificationsSchemaData(tripID);
-
+          
           if (pickupPoints && pickupPoints.length > 0) {
             const points = pickupPoints
               .map((point) => {
