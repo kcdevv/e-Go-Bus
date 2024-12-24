@@ -109,7 +109,7 @@ const Attendance = () => {
       <View style={tw`flex-1 justify-center items-center`}>
         <Image 
           source={require("../../../../assets/images/attendance.png")}
-          style={tw`w-48 h-48 mb-2`}
+          style={tw`w-56 h-56 mb-2`}
           resizeMode="contain"
         />
         <Text style={tw`text-lg font-semibold text-gray-500`}>No trip started yet</Text>
