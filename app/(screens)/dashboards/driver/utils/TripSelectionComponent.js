@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
 import tw from 'tailwind-react-native-classnames';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDriverContext } from "../context/driver.context";
 
 const TripSelectionComponent = ({
   tripEnabled,
@@ -13,6 +14,9 @@ const TripSelectionComponent = ({
 }) => {
   const [tripOptions, setTripOptions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { tripStarted, setTripStarted } = useDriverContext();
+
 
   useEffect(() => {
     setTripEnabled(false);
@@ -46,7 +50,7 @@ const TripSelectionComponent = ({
     };
 
     fetchTrips();
-  }, [tripDetails, setTripSelected]); // Run effect again if tripDetails changes
+  }, [tripDetails, setTripSelected]);
 
   // If still loading, show loading message
   if (loading) {
@@ -88,6 +92,7 @@ const TripSelectionComponent = ({
         onPress={() => {
           if (tripSelected) {
             setTripEnabled(true);
+            setTripStarted(true);
           } else {
             Alert.alert("Select a Trip", "Please select a trip before starting.");
           }

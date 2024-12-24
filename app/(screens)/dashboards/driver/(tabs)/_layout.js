@@ -7,6 +7,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
+import { DriverContextProvider } from "../context/driver.context";
+
 const screenWidth = Dimensions.get("window").width;
 
 export default function DriverDashboardLayout() {
@@ -56,8 +58,8 @@ export default function DriverDashboardLayout() {
     console.log('Cleared AsyncStorage');
     console.log('driver logged out');
     router.replace("WhoYouAre");
-}
-  
+  }
+
 
   return (
 
@@ -73,6 +75,7 @@ export default function DriverDashboardLayout() {
 
       {/* Main Content (Tab Navigator and Menu) */}
       <View style={tw`flex-1`}>
+        <DriverContextProvider>
         <Tabs
           screenOptions={{
             initialRouteName: "MapScreen",
@@ -88,32 +91,32 @@ export default function DriverDashboardLayout() {
           }}
           onTabPress={({ route }) => setActiveTab(route.name)} // Track active tab
         >
-
-          <Tabs.Screen
-            name="AlertScreen"
-            options={{
-              headerShown: false,
-              tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/msg.png"), focused), // Replace with your image path
-            }}
-          />
-          <Tabs.Screen
-            name="MapScreen"
-            options={{
-              headerShown: false,
-              tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/bus.png"), focused), // Replace with your image path
-            }}
-          />
-          <Tabs.Screen
-            name="Attendance"
-            options={{
-              headerShown: false,
-              tabBarIcon: ({ focused }) =>
-                renderTabIcon(require("../../../../assets/images/details.png"), focused), // Replace with your image path
-            }}
-          />
+            <Tabs.Screen
+              name="AlertScreen"
+              options={{
+                headerShown: false,
+                tabBarIcon: ({ focused }) =>
+                  renderTabIcon(require("../../../../assets/images/msg.png"), focused), // Replace with your image path
+              }}
+            />
+            <Tabs.Screen
+              name="MapScreen"
+              options={{
+                headerShown: false,
+                tabBarIcon: ({ focused }) =>
+                  renderTabIcon(require("../../../../assets/images/bus.png"), focused), // Replace with your image path
+              }}
+            />
+            <Tabs.Screen
+              name="Attendance"
+              options={{
+                headerShown: false,
+                tabBarIcon: ({ focused }) =>
+                  renderTabIcon(require("../../../../assets/images/details.png"), focused), // Replace with your image path
+              }}
+            />
         </Tabs>
+          </DriverContextProvider>
       </View>
 
       {/* Conditional Rendering for Menu */}

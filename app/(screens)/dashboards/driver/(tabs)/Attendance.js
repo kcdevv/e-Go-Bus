@@ -9,16 +9,19 @@ import {
 import tw from "tailwind-react-native-classnames";
 import { getDatabase, ref, onValue } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDriverContext } from "../context/driver.context";
+
 
 const Attendance = () => {
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [schoolID, setSchoolID] = useState("");
   const [busID, setBusID] = useState("");
   const [tripID, setTripID] = useState("");
   const [pickupPoints, setPickupPoints] = useState([]); // New state for Pickup Points
   const [isHorizontal, setIsHorizontal] = useState(false); // Toggle for horizontal/vertical layout
   const db = getDatabase();
+
+  const { tripStarted } = useDriverContext();
 
   // Load IDs from AsyncStorage
   const loadData = async () => {
@@ -67,7 +70,6 @@ const Attendance = () => {
                 }));
                 setStudents(studentList);
               }
-              setLoading(false);
             },
             (error) => {
               console.error("Error fetching students:", error);
@@ -83,7 +85,7 @@ const Attendance = () => {
     };
 
     getStudents();
-  }, [schoolID, busID, tripID]);
+  }, [schoolID, busID, tripID, tripStarted]);
 
   // Handle attendance status updates
   const updateAttendanceStatus = (studentID, status) => {
@@ -102,13 +104,18 @@ const Attendance = () => {
       );
   };
 
-  // if (loading) {
-  //   return (
-  //     <View style={tw`flex-1 justify-center items-center`}>
-  //       <ActivityIndicator size="large" color="#000" />
-  //     </View>
-  //   );
-  // }
+  if (!tripStarted) {
+    return (
+      <View style={tw`flex-1 justify-center items-center`}>
+        <Image 
+          source={require("../../../../assets/images/attendance.png")}
+          style={tw`w-48 h-48 mb-2`}
+          resizeMode="contain"
+        />
+        <Text style={tw`text-lg font-semibold text-gray-500`}>No trip started yet</Text>
+      </View>
+    )
+  }
 
   return (
     <View style={tw`flex-1 bg-white py-6 px-4`}>

@@ -3,7 +3,6 @@ import React, {
   useState,
   useRef,
   useCallback,
-  useLayoutEffect,
 } from "react";
 import {
   StyleSheet,
@@ -26,6 +25,7 @@ import Constants from "expo-constants";
 import { getPickupPointsData } from "../utils/getPickUpPoints";
 import { notificationsSchemaData } from "../utils/notificationData";
 import TripSelectionComponent from "../utils/TripSelectionComponent";
+import { useDriverContext } from "../context/driver.context";
 
 const PickupConfirmationOverlay = ({ onDone }) => {
   return (
@@ -60,6 +60,9 @@ const MapScreen = () => {
   const lastHeadingRef = useRef(0);
   const pickupPointsFetchedRef = useRef(false);
   const isTripActiveRef = useRef(true);
+
+
+  const { tripStarted, setTripStarted } = useDriverContext();
 
   // Fetch pickup points from Firebase
   const fetchPickupPoints = useCallback(
@@ -151,6 +154,7 @@ const MapScreen = () => {
           // Immediately set the ref to false
           isTripActiveRef.current = false;
           setTripEnabled(false);
+          setTripStarted(false);
           console.log("Trip ended, enable: ", tripEnabled);
           setTripSelected(null);
           try {
