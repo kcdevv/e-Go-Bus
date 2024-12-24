@@ -154,7 +154,6 @@ const MapScreen = () => {
           // Immediately set the ref to false
           isTripActiveRef.current = false;
           setTripEnabled(false);
-          setTripStarted(false);
           console.log("Trip ended, enable: ", tripEnabled);
           setTripSelected(null);
           try {
@@ -166,6 +165,7 @@ const MapScreen = () => {
               clearInterval(locationIntervalRef.current);
               locationIntervalRef.current = null;
             }
+            setTripStarted(false); 
             setUserLocation(null);
             setHeading(null);
             setDirections([]);
