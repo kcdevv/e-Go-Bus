@@ -1,0 +1,28 @@
+name: "CodeQL Analysis"
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 3 * * 0'
+
+jobs:
+  codeql:
+    name: Analyze Code with CodeQL
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Initialize CodeQL
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ['javascript', 'html', 'css']
+
+      # Step 3: Perform CodeQL analysis
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
