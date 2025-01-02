@@ -21,7 +21,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
         with:
-          languages: ['javascript', 'html', 'css']
+          languages: 'javascript, html, css'
 
       # Step 3: Perform CodeQL analysis
       - name: Perform CodeQL Analysis
