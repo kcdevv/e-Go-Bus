@@ -453,7 +453,6 @@ const MapScreen = () => {
         }}
         showsUserLocation={true}
         showsCompass
-        
         zoomEnabled
         maxZoomLevel={18}
         pitchEnabled
