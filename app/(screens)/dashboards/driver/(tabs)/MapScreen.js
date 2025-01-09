@@ -7,10 +7,8 @@ import React, {
 import {
   StyleSheet,
   Alert,
-  Animated,
   View,
   Text,
-  Image,
   TouchableOpacity,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
@@ -18,7 +16,7 @@ import * as Location from "expo-location";
 import { database } from "../../../../../firebase.config";
 import { loadStoredData, getLocationAsync } from "../services/locationService";
 import Loader from "../../../../components/Loader";
-import { rotateMarker, updateFirebase } from "../utils/locationUtils";
+import { updateFirebase } from "../utils/locationUtils";
 import tw from "tailwind-react-native-classnames";
 import polyline from "@mapbox/polyline";
 import Constants from "expo-constants";
@@ -52,7 +50,6 @@ const MapScreen = () => {
   const [currentPickupIndex, setCurrentPickupIndex] = useState(0);
   const [directions, setDirections] = useState([]);
   const [showPickupConfirmation, setShowPickupConfirmation] = useState(false);
-  const rotationValue = useRef(new Animated.Value(0)).current;
   const mapRef = useRef(null);
   const locationIntervalRef = useRef(null);
   const watchPositionRef = useRef(null);
@@ -201,12 +198,10 @@ const MapScreen = () => {
       if (location.coords.heading !== null) {
         setHeading(location.coords.heading);
         lastHeadingRef.current = location.coords.heading;
-        rotateMarker(rotationValue, location.coords.heading);
       }
 
       const now = Date.now();
       if (tripEnabled && now - lastFirebaseUpdateRef.current >= 2000) {
-        // console.log("Updating Firebase, tripEnabled:", tripEnabled);
         await updateFirebase(
           database,
           tripDetails?.busId,
@@ -373,7 +368,6 @@ const MapScreen = () => {
                 if (location.coords.heading !== null) {
                   lastHeadingRef.current = location.coords.heading;
                   setHeading(location.coords.heading);
-                  rotateMarker(rotationValue, location.coords.heading);
                 }
 
                 const now = Date.now();
@@ -424,11 +418,6 @@ const MapScreen = () => {
     }
   }, [tripEnabled, tripSelected, pickupPoints, currentPickupIndex]);
 
-  const rotate = rotationValue.interpolate({
-    inputRange: [0, 360],
-    outputRange: ["0deg", "360deg"],
-  });
-
   if (!tripEnabled) {
     return (
       <TripSelectionComponent
@@ -462,23 +451,14 @@ const MapScreen = () => {
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}
-        showsUserLocation={false}
+        showsUserLocation={true}
         showsCompass
+        
         zoomEnabled
         maxZoomLevel={18}
         pitchEnabled
         followsUserLocation
       >
-        <Marker
-          coordinate={userLocation}
-          title="Your Location"
-          anchor={{ x: 0.5, y: 0.5 }}
-        >
-          <Animated.Image
-            source={require("../../../../assets/icons/bus.png")}
-            style={[styles.markerImage, { transform: [{ rotate }] }]}
-          />
-        </Marker>
         {pickupPoints && pickupPoints.length > currentPickupIndex && (
           <Marker
             coordinate={pickupPoints[currentPickupIndex]}
@@ -501,12 +481,6 @@ const styles = StyleSheet.create({
   map: {
     width: "100%",
     height: "100%",
-  },
-  markerImage: {
-    width: 45,
-    height: 45,
-    resizeMode: "contain",
-    position: "absolute",
   },
   endTripButton: {
     position: "absolute",
