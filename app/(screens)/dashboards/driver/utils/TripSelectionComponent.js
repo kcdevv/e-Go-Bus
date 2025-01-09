@@ -4,6 +4,7 @@ import tw from 'tailwind-react-native-classnames';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDriverContext } from "../context/driver.context";
+import { getPickupPointsData } from './getPickUpPoints';
 
 const TripSelectionComponent = ({
   tripEnabled,
@@ -14,13 +15,11 @@ const TripSelectionComponent = ({
 }) => {
   const [tripOptions, setTripOptions] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const [tripType, setTripType] = useState("Pickup");
   const { tripStarted, setTripStarted } = useDriverContext();
-
 
   useEffect(() => {
     setTripEnabled(false);
-    console.log("tripEnabled from comp", tripEnabled);
   }, []);
 
   // Fetch trip data and update trip options
@@ -29,13 +28,11 @@ const TripSelectionComponent = ({
       try {
         setLoading(true);
         const noOfTrips = JSON.parse(await AsyncStorage.getItem('noOfTrips'));
-        await AsyncStorage.setItem('tripSelected', JSON.stringify(tripSelected));
-        // Only proceed if valid trip details are found
+
         if (noOfTrips) {
           const options = Array.from({ length: noOfTrips }, (_, i) => `T00${i + 1}`);
           setTripOptions(options);
 
-          // If only one trip, set it as the default selected trip
           if (options.length === 1) {
             setTripSelected(options[0]);
           }
@@ -52,7 +49,29 @@ const TripSelectionComponent = ({
     fetchTrips();
   }, [tripDetails, setTripSelected]);
 
-  // If still loading, show loading message
+  const handleTripStart = async () => {
+    try {
+      if (tripSelected) {
+        // Save tripSelected and tripType to AsyncStorage
+        await AsyncStorage.setItem("tripSelected", tripSelected);
+        await AsyncStorage.setItem("tripType", tripType);
+
+        const pickupPoints = await getPickupPointsData(tripSelected);
+        console.log("Pickup Points for Trip:", pickupPoints);
+
+        setTripEnabled(true);
+        setTripStarted(true);
+
+        Alert.alert("Trip Started", `Trip: ${tripSelected}\nType: ${tripType}`);
+      } else {
+        Alert.alert("Select a Trip", "Please select a trip before starting.");
+      }
+    } catch (error) {
+      console.error("Error starting trip:", error);
+      Alert.alert("Error", "Unable to start trip. Please try again.");
+    }
+  };
+
   if (loading) {
     return (
       <View style={tw`flex-1 justify-center items-center`}>
@@ -71,7 +90,6 @@ const TripSelectionComponent = ({
         {tripEnabled ? "Trip Started" : "Select and Start Your Trip"}
       </Text>
 
-      {/* Only show the Picker if more than one trip exists */}
       {tripOptions.length > 1 ? (
         <View style={tw`w-full px-4 mb-6`}>
           <Picker
@@ -87,16 +105,35 @@ const TripSelectionComponent = ({
         </View>
       ) : null}
 
-      {/* Start/End Trip Button */}
+      <View style={tw`flex-row justify-center items-center mb-6`}>
+        <TouchableOpacity
+          style={tw`flex-row items-center mr-4`}
+          onPress={() => setTripType("Pickup")}
+        >
+          <View
+            style={[
+              tw`w-5 h-5 rounded-full border-2 border-blue-500 mr-2`,
+              tripType === "Pickup" ? tw`bg-blue-500` : tw`bg-white`,
+            ]}
+          />
+          <Text style={tw`text-lg`}>Pickup</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={tw`flex-row items-center`}
+          onPress={() => setTripType("Dropping")}
+        >
+          <View
+            style={[
+              tw`w-5 h-5 rounded-full border-2 border-blue-500 mr-2`,
+              tripType === "Dropping" ? tw`bg-blue-500` : tw`bg-white`,
+            ]}
+          />
+          <Text style={tw`text-lg`}>Dropping</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity
-        onPress={() => {
-          if (tripSelected) {
-            setTripEnabled(true);
-            setTripStarted(true);
-          } else {
-            Alert.alert("Select a Trip", "Please select a trip before starting.");
-          }
-        }}
+        onPress={handleTripStart}
         style={[tw`py-3 px-6 rounded-full`, tripSelected ? tw`bg-blue-500` : tw`bg-gray-400`]}
         disabled={!tripSelected}
       >

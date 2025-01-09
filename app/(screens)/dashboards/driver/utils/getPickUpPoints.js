@@ -2,29 +2,40 @@ import { database } from "../../../../../firebase.config";
 import { ref as dbRef, get } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Function to get all pickup points data
 const getPickupPointsData = async (tripID) => {
   try {
+    // Retrieve schoolID, busID, and tripType from AsyncStorage
     const schoolID = await AsyncStorage.getItem("schoolID");
     const busID = await AsyncStorage.getItem("busID");
+    const tripType = await AsyncStorage.getItem("tripType"); // Fetch trip type
 
-    if (!schoolID || !busID || !tripID) {
+    // Validate required data
+    if (!schoolID || !busID || !tripID || !tripType) {
       throw new Error("Missing data in AsyncStorage");
     }
 
     console.log("Trip ID:", tripID);
-    await AsyncStorage.setItem('tripID', tripID);
-    console.log(" async Trip ID:", tripID);
+    console.log("Trip Type:", tripType);
 
+    // Reference to the pickup points in the Firebase database
     const pickupPointsRef = dbRef(
       database,
       `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints`
     );
     const snapshot = await get(pickupPointsRef);
 
+    // Check if data exists
     if (snapshot.exists()) {
-      console.log(snapshot.val());
-      return snapshot.val();
+      let pickupPoints = snapshot.val();
+
+      // Reverse the order for "Dropping" trip type
+      if (tripType.toLowerCase() === "dropping") {
+        // Convert object to array, reverse it, and then back to object
+        pickupPoints.reverse();
+      }
+
+      console.log("Pickup Points:", pickupPoints);
+      return pickupPoints;
     } else {
       console.warn("No pickup points found for tripID:", tripID);
       throw new Error("No pickup points found for this trip");
