@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "dotenv/config"; 
 
 export default {
   expo: {
@@ -17,9 +17,9 @@ export default {
       backgroundColor: "white",
     },
     notification: {
-      icon: "./app/assets/images/logo.png",
-      androidMode: "default",
-      androidCollapsedTitle: "e-Go Bus",
+      "icon": "./app/assets/images/logo.png",
+      "androidMode": "default",
+      "androidCollapsedTitle": "e-Go Bus"
     },
     ios: {
       supportsTablet: true,
@@ -28,7 +28,7 @@ export default {
         NSLocationAlwaysUsageDescription:
           "We need your location for maps and directions",
         NSAppTransportSecurity: {
-          NSAllowsArbitraryLoads: false, // Restrict arbitrary loads for production
+          NSAllowsArbitraryLoads: true,
         },
       },
       entitlements: {
@@ -74,32 +74,17 @@ export default {
       FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID,
       FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL,
       router: {
-        origin: true,
+        origin: false,
       },
       eas: {
-        projectId: "edf3ac22-146d-476a-a235-f1ed9ff741fe"
+        projectId: "edf3ac22-146d-476a-a235-f1ed9ff741fe", // EAS Project ID
       },
     },
-    updates: {
-      enabled: true,
-      fallbackToCacheTimeout: 0, 
-    },
-    runtimeVersion: {
-      policy: "appVersion", // Ensure runtime version is tied to app version
-    },
-    androidStatusBar: {
-      backgroundColor: "#ffffff",
-      barStyle: "dark-content", // Adjust status bar for production visuals
-    },
-    iosStatusBar: {
-      style: "dark",
-    },
-    assetBundlePatterns: ["**/*"], // Include all assets in the bundle
     doctor: {
       reactNativeDirectoryCheck: {
         exclude: ["react-native-maps"],
-        listUnknownPackages: false,
-      },
-    },
+        listUnknownPackages: false
+      }
+    }
   },
 };
