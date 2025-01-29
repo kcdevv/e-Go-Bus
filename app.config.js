@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config(); 
+dotenv.config();
 
 export default {
   expo: {
@@ -15,7 +15,7 @@ export default {
     splash: {
       image: "./app/assets/images/logo.png",
       resizeMode: "cover",
-      backgroundColor: "white",
+      backgroundColor: "#FFFFFF",
     },
     notification: {
       "icon": "./app/assets/images/logo.png",
@@ -50,7 +50,7 @@ export default {
       ],
       adaptiveIcon: {
         foregroundImage: "./app/assets/images/icon.png",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#FFFFFFFF",
       },
       package: "com.kcjod.eGoBus",
       config: {
@@ -66,19 +66,12 @@ export default {
     },
     plugins: ["expo-router"],
     extra: {
-      FIREBASE_API_KEY: process.env.FIREBASE_API_KEY,
-      FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN,
-      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-      FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
-      FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      FIREBASE_APP_ID: process.env.FIREBASE_APP_ID,
-      FIREBASE_MEASUREMENT_ID: process.env.FIREBASE_MEASUREMENT_ID,
-      FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL,
+      ...process.env,
       router: {
         origin: false,
       },
       eas: {
-        projectId: "edf3ac22-146d-476a-a235-f1ed9ff741fe", // EAS Project ID
+        projectId: "4c56cba0-97ab-42c4-9f44-96e2b8ae12be", // EAS Project ID
       },
     },
     doctor: {
