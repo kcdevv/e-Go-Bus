@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "958013905644",
+    "firebase_url": "https://egobus-5be34-default-rtdb.firebaseio.com",
+    "project_id": "egobus-5be34",
+    "storage_bucket": "egobus-5be34.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:958013905644:android:d32000c3e9c938b72223c9",
+        "android_client_info": {
+          "package_name": "com.kcjod.eGoBus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsdwTIpsdf8a8Oa_nWU_AFH8Qcy8OEvnQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
