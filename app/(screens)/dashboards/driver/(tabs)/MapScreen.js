@@ -11,19 +11,78 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
+import tw from "tailwind-react-native-classnames";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
+import * as TaskManager from 'expo-task-manager';
+import * as BackgroundFetch from 'expo-background-fetch';
 import { database } from "../../../../../firebase.config";
 import { loadStoredData, getLocationAsync } from "../services/locationService";
 import Loader from "../../../../components/Loader";
 import { updateFirebase } from "../utils/locationUtils";
-import tw from "tailwind-react-native-classnames";
 import polyline from "@mapbox/polyline";
 import Constants from "expo-constants";
 import { getPickupPointsData } from "../utils/getPickUpPoints";
 import { notificationsSchemaData } from "../utils/notificationData";
 import TripSelectionComponent from "../utils/TripSelectionComponent";
 import { useDriverContext } from "../context/driver.context";
+
+const LOCATION_TASK_NAME = 'background-location-task';
+const BACKGROUND_FETCH_TASK = 'background-fetch';
+
+// Define the background location task
+TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data: { locations }, error }) => {
+  if (error) {
+    console.error(error);
+    return;
+  }
+  if (locations && locations.length > 0) {
+    const location = locations[locations.length - 1];
+    try {
+      const tripDetails = await loadStoredData();
+      if (tripDetails?.busId && tripDetails?.schoolId && tripDetails?.tripEnabled) {
+        await updateFirebase(
+          database,
+          tripDetails.busId,
+          tripDetails.schoolId,
+          tripDetails.tripSelected,
+          location,
+          location.coords.heading || 0
+        );
+      }
+    } catch (error) {
+      console.error("Background location update failed:", error);
+    }
+  }
+});
+
+// Define background fetch task
+TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
+  try {
+    const tripDetails = await loadStoredData();
+    if (tripDetails?.tripEnabled) {
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      });
+      
+      if (tripDetails?.busId && tripDetails?.schoolId) {
+        await updateFirebase(
+          database,
+          tripDetails.busId,
+          tripDetails.schoolId,
+          tripDetails.tripSelected,
+          location,
+          location.coords.heading || 0
+        );
+      }
+      return BackgroundFetch.BackgroundFetchResult.NewData;
+    }
+    return BackgroundFetch.BackgroundFetchResult.NoData;
+  } catch (error) {
+    console.error("Background fetch failed:", error);
+    return BackgroundFetch.BackgroundFetchResult.Failed;
+  }
+});
 
 const PickupConfirmationOverlay = ({ onDone }) => {
   return (
@@ -58,8 +117,69 @@ const MapScreen = () => {
   const pickupPointsFetchedRef = useRef(false);
   const isTripActiveRef = useRef(true);
 
-
   const { tripStarted, setTripStarted } = useDriverContext();
+
+  const startBackgroundLocationUpdates = async () => {
+    try {
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus === 'granted') {
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 10000,
+          distanceInterval: 10,
+          foregroundService: {
+            notificationTitle: "Trip Active",
+            notificationBody: "Your trip is in progress. Location tracking enabled.",
+            notificationColor: "#4CAF50",
+            notificationPriority: "high",
+            notificationChannelId: 'location-tracking',
+            notificationId: 1,
+            notificationOngoing: true,
+            notificationSticky: true, // Make the notification non-dismissible
+          },
+          showsBackgroundLocationIndicator: true,
+        });
+
+        // Register background fetch
+        await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+          minimumInterval: 60, // 1 minute
+          stopOnTerminate: false,
+          startOnBoot: true,
+        });
+
+        // Store trip enabled status
+        await loadStoredData({
+          ...tripDetails,
+          tripEnabled: true,
+          tripSelected
+        });
+      }
+    } catch (error) {
+      console.error("Error starting background location:", error);
+    }
+  };
+
+  const stopBackgroundLocationUpdates = async () => {
+    try {
+      const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
+      if (isTaskRegistered) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      }
+      
+      const isBackgroundFetchRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
+      if (isBackgroundFetchRegistered) {
+        await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+      }
+
+      // Update stored trip status
+      await loadStoredData({
+        ...tripDetails,
+        tripEnabled: false
+      });
+    } catch (error) {
+      console.error("Error stopping background location:", error);
+    }
+  };
 
   // Fetch pickup points from Firebase
   const fetchPickupPoints = useCallback(
@@ -111,6 +231,7 @@ const MapScreen = () => {
     if (!tripEnabled) {
       setTripEnabled(false);
       console.log("Trip disabled, cleaning up...");
+      stopBackgroundLocationUpdates();
       // Clear location tracking when trip is disabled
       if (watchPositionRef.current) {
         watchPositionRef.current.remove();
@@ -130,6 +251,8 @@ const MapScreen = () => {
       pickupPointsFetchedRef.current = false;
       setPickupPoints([]);
       console.log("Cleanup completed, tripEnabled:", tripEnabled);
+    } else {
+      startBackgroundLocationUpdates();
     }
   }, [tripEnabled]);
 
@@ -148,21 +271,27 @@ const MapScreen = () => {
       {
         text: "Yes, End Trip",
         onPress: async () => {
-          // Immediately set the ref to false
-          isTripActiveRef.current = false;
-          setTripEnabled(false);
-          console.log("Trip ended, enable: ", tripEnabled);
-          setTripSelected(null);
           try {
+            // First stop background tasks
+            await stopBackgroundLocationUpdates();
+            
+            // Then stop watch position if active
             if (watchPositionRef.current) {
-              await watchPositionRef.current.remove();
+              watchPositionRef.current.remove();
               watchPositionRef.current = null;
             }
+
+            // Clear interval if active  
             if (locationIntervalRef.current) {
               clearInterval(locationIntervalRef.current);
               locationIntervalRef.current = null;
             }
-            setTripStarted(false); 
+
+            // Update state and refs after stopping services
+            isTripActiveRef.current = false;
+            setTripEnabled(false);
+            setTripStarted(false);
+            setTripSelected(null);
             setUserLocation(null);
             setHeading(null);
             setDirections([]);
@@ -171,10 +300,11 @@ const MapScreen = () => {
             lastFirebaseUpdateRef.current = 0;
             pickupPointsFetchedRef.current = false;
             setPickupPoints([]);
+
             console.log("Trip ended and all tracking/updates stopped");
           } catch (error) {
             console.error("Error stopping trip:", error);
-            Alert.alert("Error", "Failed to properly end trip");
+            Alert.alert("Error", "Failed to properly end trip. Please try again.");
           }
         },
       },

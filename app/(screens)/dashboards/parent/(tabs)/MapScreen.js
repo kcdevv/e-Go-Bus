@@ -30,7 +30,7 @@ const MapScreen = () => {
 
   // Decode polyline
   const decodePolyline = (encoded) => {
-    const polyline = require('polyline');
+    const polyline = require('@mapbox/polyline');
     return polyline.decode(encoded).map(([latitude, longitude]) => ({ latitude, longitude }));
   };
 

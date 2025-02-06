@@ -18,9 +18,9 @@ export default {
       backgroundColor: "#FFFFFF",
     },
     notification: {
-      "icon": "./app/assets/images/logo.png",
-      "androidMode": "default",
-      "androidCollapsedTitle": "e-Go Bus"
+      icon: "./app/assets/images/logo.png",
+      androidMode: "default",
+      androidCollapsedTitle: "e-Go Bus",
     },
     ios: {
       supportsTablet: true,
@@ -41,6 +41,8 @@ export default {
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION", // Required for background tracking
+        "FOREGROUND_SERVICE", // Needed for running background tasks
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE",
@@ -64,21 +66,25 @@ export default {
     web: {
       favicon: "./assets/favicon.png",
     },
-    plugins: ["expo-router"],
+    plugins: [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          isAndroidBackgroundLocationEnabled: true, // Enable background location
+          locationAlwaysAndWhenInUsePermission:
+            "Allow the app to access location in the background",
+        },
+      ],
+    ],
     extra: {
       ...process.env,
       router: {
         origin: false,
       },
       eas: {
-        projectId: "4c56cba0-97ab-42c4-9f44-96e2b8ae12be", // EAS Project ID
+        projectId: "4c56cba0-97ab-42c4-9f44-96e2b8ae12be",
       },
     },
-    doctor: {
-      reactNativeDirectoryCheck: {
-        exclude: ["react-native-maps"],
-        listUnknownPackages: false
-      }
-    }
   },
 };
