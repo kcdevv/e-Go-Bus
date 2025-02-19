@@ -7,18 +7,16 @@ import {
   ScrollView,
 } from "react-native";
 import tw from "tailwind-react-native-classnames";
-import { getDatabase, ref, onValue } from "firebase/database";
+import { getDatabase, ref, onValue, set } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDriverContext } from "../context/driver.context";
-
 
 const Attendance = () => {
   const [students, setStudents] = useState([]);
   const [schoolID, setSchoolID] = useState("");
   const [busID, setBusID] = useState("");
   const [tripID, setTripID] = useState("");
-  const [pickupPoints, setPickupPoints] = useState([]); // New state for Pickup Points
-  const [isHorizontal, setIsHorizontal] = useState(false); // Toggle for horizontal/vertical layout
+  const [pickupPoints, setPickupPoints] = useState([]); 
   const db = getDatabase();
 
   const { tripStarted } = useDriverContext();
@@ -28,7 +26,10 @@ const Attendance = () => {
     try {
       const storedSchoolID = await AsyncStorage.getItem("schoolID");
       const storedBusID = await AsyncStorage.getItem("busID");
-      const storedTripID = await AsyncStorage.getItem("tripID");
+      const storedTripID = await AsyncStorage.getItem("tripSelected");
+
+      console.log("Loaded IDs:", storedSchoolID, storedBusID, storedTripID);
+
       if (storedSchoolID) setSchoolID(storedSchoolID);
       if (storedBusID) setBusID(storedBusID);
       if (storedTripID) setTripID(storedTripID);
@@ -40,9 +41,11 @@ const Attendance = () => {
   useEffect(() => {
     const getStudents = async () => {
       try {
-        await loadData();
+        await loadData(); 
+
         if (schoolID && busID && tripID) {
-          // Get Pickup Points
+          console.log("Fetching students for:", schoolID, busID, tripID);
+
           const pickupPointsRef = ref(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/pickupPoints/`);
           const studentsRef = ref(db, `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/`);
 
@@ -54,28 +57,28 @@ const Attendance = () => {
                 id: key,
                 ...data[key],
               }));
-              setPickupPoints(pointsList); // Store pickup points
+              setPickupPoints(pointsList);
+            } else {
+              setPickupPoints([]);
             }
           });
 
           // Fetch Students
-          const unsubscribe = onValue(
-            studentsRef,
-            (snapshot) => {
-              const data = snapshot.val();
-              if (data) {
-                const studentList = Object.keys(data).map((key) => ({
-                  id: key,
-                  ...data[key],
-                }));
-                setStudents(studentList);
-              }
-            },
-            (error) => {
-              console.error("Error fetching students:", error);
-              setLoading(false);
+          const unsubscribe = onValue(studentsRef, (snapshot) => {
+            const data = snapshot.val();
+            
+            console.log("student are");
+            console.log(data);
+            if (data) {
+              const studentList = Object.keys(data).map((key) => ({
+                id: key,
+                ...data[key],
+              }));
+              setStudents(studentList);
+            } else {
+              setStudents([]);
             }
-          );
+          });
 
           return () => unsubscribe();
         }
@@ -85,7 +88,7 @@ const Attendance = () => {
     };
 
     getStudents();
-  }, [schoolID, busID, tripID, tripStarted]);
+  }, [tripStarted, schoolID, busID, tripID]);
 
   // Handle attendance status updates
   const updateAttendanceStatus = (studentID, status) => {
@@ -97,6 +100,7 @@ const Attendance = () => {
       db,
       `schools/${schoolID}/buses/${busID}/trips/${tripID}/students/${studentID}`
     );
+
     set(attendanceRef, { attendanceStatus: status })
       .then(() => console.log(`Updated attendance for ${studentID}: ${status}`))
       .catch((error) =>
@@ -106,7 +110,7 @@ const Attendance = () => {
 
   if (!tripStarted) {
     return (
-      <View style={tw`flex-1 justify-center items-center`}>
+      <View style={tw`flex-1 justify-center items-center`}> 
         <Image 
           source={require("../../../../assets/images/attendance.png")}
           style={tw`w-56 h-56 mb-2`}
@@ -129,7 +133,6 @@ const Attendance = () => {
             <Text style={tw`text-xl font-bold text-black mb-4`}>
               Pickup Point: {pp.pickupPointID}
             </Text>
-            {/* Horizontal ScrollView for students under each Pickup Point */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {students
                 .filter((student) => student.pickupPointID === pp.pickupPointID)
@@ -141,7 +144,7 @@ const Attendance = () => {
                     <View style={tw`items-center mb-4`}>
                       <Image
                         source={student.profilePic ? { uri: student.profilePic } : require("../../../../assets/images/student.png")}
-                        style={[tw`rounded-full border-2 border-gray-300`, { width: 120, height: 120 }]} // Increased image size
+                        style={[tw`rounded-full border-2 border-gray-300`, { width: 120, height: 120 }]}
                       />
                       <Text style={tw`text-lg font-semibold text-black mt-2`}>
                         {student.studentName}
@@ -150,10 +153,7 @@ const Attendance = () => {
                     <View style={tw`flex-row justify-evenly items-center mt-2`}>
                       <TouchableOpacity
                         onPress={() => updateAttendanceStatus(student.id, "Absent")}
-                        style={[
-                          tw`bg-red-500 px-8 py-2 shadow-md`,
-                          { marginRight: 16 }, // Adds space between buttons
-                        ]}
+                        style={[tw`bg-red-500 px-8 py-2 shadow-md`, { marginRight: 16 }]}
                       >
                         <Text style={tw`text-white text-3xl font-bold`}>✗</Text>
                       </TouchableOpacity>
@@ -165,8 +165,6 @@ const Attendance = () => {
                         <Text style={tw`text-white text-3xl font-bold`}>✓</Text>
                       </TouchableOpacity>
                     </View>
-
-
                   </View>
                 ))}
             </ScrollView>
