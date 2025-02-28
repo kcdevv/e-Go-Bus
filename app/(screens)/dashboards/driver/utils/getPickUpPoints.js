@@ -34,7 +34,6 @@ const getPickupPointsData = async (tripID) => {
         pickupPoints.reverse();
       }
 
-      console.log("Pickup Points:", pickupPoints);
       return pickupPoints;
     } else {
       console.warn("No pickup points found for tripID:", tripID);

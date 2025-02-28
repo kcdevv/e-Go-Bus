@@ -5,6 +5,8 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDriverContext } from "../context/driver.context";
 import { getPickupPointsData } from './getPickUpPoints';
+import axios from 'axios';
+import { fetchTokens } from './fetchTokens';
 
 const TripSelectionComponent = ({
   tripEnabled,
@@ -15,6 +17,7 @@ const TripSelectionComponent = ({
 }) => {
   const [tripOptions, setTripOptions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tokens, setTokens] = useState()
   const [tripType, setTripType] = useState("Pickup");
   const { tripStarted, setTripStarted } = useDriverContext();
 
@@ -61,6 +64,18 @@ const TripSelectionComponent = ({
 
         setTripEnabled(true);
         setTripStarted(true);
+        const allTokens = await fetchTokens();
+        const extractedTokens = Object.values(allTokens); // Extract token values
+        setTokens(extractedTokens); // Update state properly
+
+        console.log(extractedTokens);
+
+        const response = await axios.post("https://sendnotificationtomany-hnw25swtha-uc.a.run.app", {
+          tokens: extractedTokens,  // Ensure tokens is an array
+          title: "Trip has Started",
+          body: "Bus left the school to pickup you, get to your pickup ASAP"
+        });
+        console.log(response.error)
 
         Alert.alert("Trip Started", `Trip: ${tripSelected}\nType: ${tripType}`);
       } else {

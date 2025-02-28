@@ -9,7 +9,7 @@ import registerDeviceToken from "../services/fetchTokenAndSaveRDB";
 import {
   uploadProfileImage,
   validateFields,
-  updateProfilePic,
+  updateProfilePic
 } from "../services/parentAuth.service";
 import Loader from "../../components/Loader";
 
@@ -25,7 +25,7 @@ const Parent = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      
+
       const validationResult = await validateFields(schoolID, busID, studentID, tripID);
 
       if (validationResult !== true) {
@@ -46,6 +46,7 @@ const Parent = () => {
 
       try {
         const deviceToken = await registerDeviceToken(schoolID, studentID, busID, tripID);
+        // console.log(deviceToken);
         const response = await updateProfilePic(schoolID, busID, tripID, studentID, profilePicUrl, deviceToken);
 
 
@@ -60,7 +61,6 @@ const Parent = () => {
 
           for (const key of keys) {
             const value = await AsyncStorage.getItem(key);
-            
           }
 
           navigation.reset({
@@ -99,7 +99,7 @@ const Parent = () => {
   };
 
   if (loading) {
-    return <Loader text="Authenticating..." color="#FFFFFF" backgroundColor="#FCD32D"/>;
+    return <Loader text="Authenticating..." color="#FFFFFF" backgroundColor="#FCD32D" />;
   }
 
   return (

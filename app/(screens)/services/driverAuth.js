@@ -73,21 +73,21 @@ export const countTripsAndStore = async (schoolID, busID) => {
   try {
     const tripsRef = dbRef(database, `schools/${schoolID}/buses/${busID}/trips`);
     const tripsSnapshot = await get(tripsRef);
-    
+
     if (tripsSnapshot.exists()) {
       const tripsData = tripsSnapshot.val();
       const noOfTrips = Object.keys(tripsData).length;
-      
+
       // Store trips data and count
       await AsyncStorage.setItem('tripsData', JSON.stringify(tripsData));
       await AsyncStorage.setItem('noOfTrips', JSON.stringify(noOfTrips));
-      
+
       return {
         tripsData,
         noOfTrips
       };
     }
-    
+
     await AsyncStorage.setItem('noOfTrips', '0');
     return {
       tripsData: {},
@@ -102,8 +102,8 @@ export const countTripsAndStore = async (schoolID, busID) => {
 // Update driver's device token
 export const updateDriverToken = async (schoolID, busID, driverID, deviceToken) => {
   try {
-    const driverRef = dbRef(database, `schools/${schoolID}/buses/${busID}/driver`);
-    
+    const driverRef = dbRef(database, `schools/${schoolID}/buses/${busID}`);
+
     await update(driverRef, {
       token: deviceToken
     });
@@ -141,21 +141,6 @@ export const registerDriverToken = async (schoolID, driverID, busID) => {
     // Update Firebase only if the token has changed
     if (storedToken !== token) {
       await AsyncStorage.setItem("deviceToken", token);
-
-      const driverRef = dbRef(
-        database,
-        `schools/${schoolID}/buses/${busID}`
-      );
-
-      const driverSnapshot = await get(driverRef);
-
-      if (!driverSnapshot.exists()) {
-        // Create the node if it doesn't exist
-        await set(driverRef, { token });
-      } else {
-        // Update the existing node without overwriting other properties
-        await update(driverRef, { token });
-      }
     }
 
     return token;
