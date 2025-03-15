@@ -35,5 +35,9 @@ const fetchTokens = async () => {
   }
 };
 
+const fetchTokensAtPickup = () => {
+
+}
+
 
 export { fetchTokens };

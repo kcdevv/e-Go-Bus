@@ -17,7 +17,6 @@ const TripSelectionComponent = ({
 }) => {
   const [tripOptions, setTripOptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [tokens, setTokens] = useState()
   const [tripType, setTripType] = useState("Pickup");
   const { tripStarted, setTripStarted } = useDriverContext();
 
@@ -64,18 +63,17 @@ const TripSelectionComponent = ({
 
         setTripEnabled(true);
         setTripStarted(true);
-        const allTokens = await fetchTokens();
-        const extractedTokens = Object.values(allTokens); // Extract token values
-        setTokens(extractedTokens); // Update state properly
-
-        console.log(extractedTokens);
+        const tokens = await fetchTokens();
+        const extractedTokens = Object.values(tokens);
+        // console.log(extractedTokens);
 
         const response = await axios.post("https://sendnotificationtomany-hnw25swtha-uc.a.run.app", {
-          tokens: extractedTokens,  // Ensure tokens is an array
+          tokens: extractedTokens,
           title: "Trip has Started",
-          body: "Bus left the school to pickup you, get to your pickup ASAP"
+          body: tripType === "Pickup" ? "Bus left the school to pickup you, get to your pickup ASAP" : "Bus is returning from school"
         });
-        console.log(response.error)
+        console.log(response.data);
+
 
         Alert.alert("Trip Started", `Trip: ${tripSelected}\nType: ${tripType}`);
       } else {
